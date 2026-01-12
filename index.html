@@ -467,177 +467,93 @@
                 status.className = 'video-item-status';
 
                 var resolved = false;
+                var startTime = Date.now();
 
-                // Try fetch first to get HTTP status code
-                fetch(url, {
-                    method: 'HEAD',
-                    cache: 'no-cache'
-                })
-                .then(function(response) {
+                // Use XMLHttpRequest which may behave differently than fetch in iframes
+                var xhr = new XMLHttpRequest();
+                
+                xhr.timeout = 5000; // 5 second timeout
+                
+                xhr.onload = function() {
                     if (!resolved) {
                         resolved = true;
-                        if (response.ok) {
-                            // HTTP 200-299 status
+                        var responseTime = Date.now() - startTime;
+                        
+                        // Check status code if available
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            indicator.className = 'video-item-indicator online';
+                            status.textContent = 'Online';
+                            status.className = 'video-item-status online';
+                        } else if (xhr.status >= 400) {
+                            indicator.className = 'video-item-indicator offline';
+                            status.textContent = 'Offline';
+                            status.className = 'video-item-status offline';
+                        } else {
+                            // Status 0 or unknown - use timing
+                            if (responseTime < 2000) {
+                                indicator.className = 'video-item-indicator online';
+                                status.textContent = 'Online';
+                                status.className = 'video-item-status online';
+                            } else {
+                                indicator.className = 'video-item-indicator offline';
+                                status.textContent = 'Offline';
+                                status.className = 'video-item-status offline';
+                            }
+                        }
+                    }
+                };
+                
+                xhr.onerror = function() {
+                    if (!resolved) {
+                        resolved = true;
+                        var responseTime = Date.now() - startTime;
+                        
+                        // Error - check if it was quick (CORS) or slow (offline)
+                        if (responseTime < 1000) {
+                            // Quick error might be CORS - assume online
                             indicator.className = 'video-item-indicator online';
                             status.textContent = 'Online';
                             status.className = 'video-item-status online';
                         } else {
-                            // HTTP error status (404, 403, etc.)
+                            // Slow error suggests offline
                             indicator.className = 'video-item-indicator offline';
                             status.textContent = 'Offline';
                             status.className = 'video-item-status offline';
                         }
                     }
-                })
-                .catch(function(error) {
-                    // Fetch failed due to CORS or network error
-                    // Try alternative methods
+                };
+                
+                xhr.ontimeout = function() {
                     if (!resolved) {
-                        tryAlternativeCheck(url, indicator, status, function(isResolved) {
-                            resolved = isResolved;
-                        });
+                        resolved = true;
+                        indicator.className = 'video-item-indicator offline';
+                        status.textContent = 'Offline';
+                        status.className = 'video-item-status offline';
                     }
-                });
-
-                // Set a timeout in case fetch hangs
+                };
+                
+                try {
+                    xhr.open('HEAD', url, true);
+                    xhr.send();
+                } catch(e) {
+                    if (!resolved) {
+                        resolved = true;
+                        // Exception thrown - likely CORS, assume online
+                        indicator.className = 'video-item-indicator online';
+                        status.textContent = 'Online';
+                        status.className = 'video-item-status online';
+                    }
+                }
+                
+                // Safety timeout
                 setTimeout(function() {
                     if (!resolved) {
-                        tryAlternativeCheck(url, indicator, status, function(isResolved) {
-                            resolved = isResolved;
-                        });
-                    }
-                }, 2000);
-            }
-
-            function tryAlternativeCheck(url, indicator, status, callback) {
-                var localResolved = false;
-
-                // Use Image object as a reliable cross-origin check
-                var img = new Image();
-                var imgTimeout = setTimeout(function() {
-                    if (!localResolved) {
-                        localResolved = true;
-                        callback(true);
-                        // Image failed to load within timeout - likely offline
+                        resolved = true;
                         indicator.className = 'video-item-indicator offline';
                         status.textContent = 'Offline';
                         status.className = 'video-item-status offline';
                     }
-                }, 5000);
-
-                img.onload = function() {
-                    clearTimeout(imgTimeout);
-                    if (!localResolved) {
-                        localResolved = true;
-                        callback(true);
-                        // Image loaded - server is responding, video is online
-                        indicator.className = 'video-item-indicator online';
-                        status.textContent = 'Online';
-                        status.className = 'video-item-status online';
-                    }
-                };
-
-                img.onerror = function() {
-                    clearTimeout(imgTimeout);
-                    if (!localResolved) {
-                        localResolved = true;
-                        callback(true);
-                        // Image failed - try video element to determine if online or offline
-                        tryVideoElementCheck(url, indicator, status);
-                    }
-                };
-
-                img.src = url;
-            }
-
-            function tryVideoElementCheck(url, indicator, status) {
-                const testVideo = document.createElement('video');
-                testVideo.muted = true;
-                testVideo.preload = 'metadata';
-                
-                let localResolved = false;
-
-                // Shorter timeout for video check
-                const timeout = setTimeout(function() {
-                    if (!localResolved) {
-                        localResolved = true;
-                        // Timeout - assume offline
-                        indicator.className = 'video-item-indicator offline';
-                        status.textContent = 'Offline';
-                        status.className = 'video-item-status offline';
-                        cleanupVideo(testVideo);
-                    }
-                }, 4000);
-
-                testVideo.addEventListener('loadedmetadata', function() {
-                    if (!localResolved) {
-                        localResolved = true;
-                        clearTimeout(timeout);
-                        indicator.className = 'video-item-indicator online';
-                        status.textContent = 'Online';
-                        status.className = 'video-item-status online';
-                        cleanupVideo(testVideo);
-                    }
-                });
-
-                testVideo.addEventListener('loadeddata', function() {
-                    if (!localResolved) {
-                        localResolved = true;
-                        clearTimeout(timeout);
-                        indicator.className = 'video-item-indicator online';
-                        status.textContent = 'Online';
-                        status.className = 'video-item-status online';
-                        cleanupVideo(testVideo);
-                    }
-                });
-
-                testVideo.addEventListener('canplay', function() {
-                    if (!localResolved) {
-                        localResolved = true;
-                        clearTimeout(timeout);
-                        indicator.className = 'video-item-indicator online';
-                        status.textContent = 'Online';
-                        status.className = 'video-item-status online';
-                        cleanupVideo(testVideo);
-                    }
-                });
-
-                testVideo.addEventListener('error', function(e) {
-                    if (!localResolved) {
-                        localResolved = true;
-                        clearTimeout(timeout);
-                        
-                        if (testVideo.error) {
-                            // Check error code
-                            switch(testVideo.error.code) {
-                                case 2: // MEDIA_ERR_NETWORK
-                                    // Network error could be CORS or actual network issue
-                                    // In Google Sites, assume it's online if we got this far
-                                    indicator.className = 'video-item-indicator online';
-                                    status.textContent = 'Online';
-                                    status.className = 'video-item-status online';
-                                    cleanupVideo(testVideo);
-                                    return;
-                                case 4: // MEDIA_ERR_SRC_NOT_SUPPORTED
-                                    // In Google Sites, this often means CORS, not that file doesn't exist
-                                    indicator.className = 'video-item-indicator online';
-                                    status.textContent = 'Online';
-                                    status.className = 'video-item-status online';
-                                    cleanupVideo(testVideo);
-                                    return;
-                            }
-                        }
-                        
-                        // For other errors, mark as offline
-                        indicator.className = 'video-item-indicator offline';
-                        status.textContent = 'Offline';
-                        status.className = 'video-item-status offline';
-                        cleanupVideo(testVideo);
-                    }
-                });
-
-                testVideo.src = url;
-                testVideo.load();
+                }, 6000);
             }
 
             function recheckAllLinks() {
