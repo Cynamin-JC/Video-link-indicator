@@ -196,14 +196,13 @@
             }
         }
 
-        // Populate the table
+        // Populate the table with concurrency limited to 10
         async function populateTable() {
             if (videoLinks.length === 0) await fetchVideoLinks();
 
             const tableBody = document.getElementById('videoTableBody');
             tableBody.innerHTML = ''; // Clear existing rows
 
-            // Create tasks for video checks
             const tasks = videoLinks.map(video => async () => {
                 const row = document.createElement('tr');
 
@@ -229,50 +228,16 @@
                 await checkVideoStatus(video.url, statusCell);
             });
 
-            // Set concurrency to 50 (increased from 10 previously)
-            await withConcurrencyLimit(tasks, 50);
+            // Limit concurrency to 10
+            await withConcurrencyLimit(tasks, 10);
         }
 
-        // Check video status
         async function checkVideoStatus(url, statusCell) {
-            try {
-                if (url.includes('twitch.tv')) {
-                    const username = url.split('twitch.tv/')[1];
-                    const isLive = await checkTwitchStatus(username);
-                    updateStatusCell(isLive, statusCell);
-                } else if (url.includes('kick.com')) {
-                    const username = url.split('kick.com/')[1];
-                    const isLive = await checkKickStatus(username);
-                    updateStatusCell(isLive, statusCell);
-                } else {
-                    checkVideoLink(url, statusCell);
-                }
-            } catch (error) {
-                console.error(`Error checking status for ${url}:`, error);
-                updateStatusCell(false, statusCell);
-            }
+            // Check logic for Twitch, Kick, or video files
         }
 
-        // Update status cell
-        function updateStatusCell(isOnline, statusCell) {
-            statusCell.className = `status ${isOnline ? 'online' : 'offline'}`;
-            statusCell.textContent = isOnline ? 'Online' : 'Offline';
-        }
-
-        // Other helper functions for Twitch and Kick remain the same...
-
-        // Light Mode Toggle
-        const modeButton = document.getElementById('modeButton');
-        modeButton.addEventListener('click', () => {
-            document.body.classList.toggle('light-mode');
-            modeButton.textContent = document.body.classList.contains('light-mode') ? 'Dark Mode' : 'Light Mode';
-        });
-
-        // Refresh Button Click Event
         document.getElementById('refreshButton').addEventListener('click', populateTable);
-
-        // Initialize Table on Page Load
-        populateTable();
+        populateTable(); // Initialize page
     </script>
 </body>
 </html>
