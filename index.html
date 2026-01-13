@@ -22,10 +22,17 @@
             margin-bottom: 20px;
         }
 
+        /* Two-Column Layout for Content */
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Two columns */
+            gap: 20px;
+            align-items: start; /* Align content at start of the column */
+        }
+
         /* Table Styling */
         table {
-            width: 90%;
-            margin: 0 auto;
+            width: 100%;
             border-collapse: collapse;
             overflow: hidden;
             background: #fff;
@@ -90,22 +97,48 @@
         a:hover {
             text-decoration: underline;
         }
+
+        /* Refresh Button */
+        button {
+            padding: 10px 20px;
+            background-color: #4285f4;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: #306dc5;
+        }
     </style>
 </head>
 <body>
     <h1>Stylish Video Links & Stream Status</h1>
-    <table>
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Video Link</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody id="videoTableBody">
-            <!-- Table rows will be dynamically added here -->
-        </tbody>
-    </table>
+
+    <div class="container">
+        <div>
+            <!-- Add Refresh Button -->
+            <button id="refreshButton">Refresh</button>
+        </div>
+        <div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Video Link</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="videoTableBody">
+                    <!-- Table rows will be dynamically added here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
 
     <script>
         // Fetch the video links JSON file
@@ -181,7 +214,7 @@
             }
         }
 
-        // Twitch Status Check (No Auth Required)
+        // Twitch Status Check
         async function checkTwitchStatus(username) {
             try {
                 const response = await fetch(`https://www.twitch.tv/${username}`);
@@ -213,17 +246,5 @@
             video.onloadeddata = () => updateStatusCell(true, statusCell);
             video.onerror = () => updateStatusCell(false, statusCell);
 
-            video.src = url; // Set the video source to check availability
-        }
-
-        // Update the Status Cell
-        function updateStatusCell(isOnline, statusCell) {
-            statusCell.className = `status ${isOnline ? 'online' : 'offline'}`;
-            statusCell.textContent = isOnline ? 'Online' : 'Offline';
-        }
-
-        // Initialize the table on page load
-        populateTable();
-    </script>
-</body>
-</html>
+            video.src*
+
