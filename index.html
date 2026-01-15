@@ -28,10 +28,17 @@
             margin-bottom: 20px;
         }
 
-        /* Table Styling */
-        table {
+        /* Table Container */
+        .table-container {
+            display: flex;
+            justify-content: space-between;
             width: 90%;
             margin: 0 auto;
+        }
+
+        /* Table Styling */
+        table {
+            width: 48%;
             border-collapse: collapse;
             background: #2e2e2e;
             border-radius: 8px;
@@ -49,7 +56,7 @@
         }
 
         th, td {
-            padding: 10px; /* Reduced padding for compact layout */
+            padding: 8px 10px; /* Adjusted padding */
             text-align: left;
         }
 
@@ -70,269 +77,87 @@
             background: #eef;
         }
 
-        /* Status Chips */
-        .status {
-            display: inline-block;
-            padding: 3px 8px; /* Smaller chips */
-            font-size: 12px;
-            border-radius: 20px;
-            text-align: center;
+        .divider {
             font-weight: bold;
             color: #fff;
-            vertical-align: middle; /* Align to middle vertically */
-            line-height: 1.4; /* Adjust alignment space */
+            text-align: center;
+            padding: 10px;
+            background-color: #555;
+        }
+        body.light-mode .divider {
+            background: #ddd;
+            color: #333;
         }
 
-        .status.online {
-            background-color: #34a853;
-        }
-
-        .status.offline {
-            background-color: #ea4335;
-        }
-
-        .status.checking {
-            background-color: #fbbc05;
-        }
-
-        /* Link Styling */
-        a {
-            text-decoration: none;
-            color: #8ab4f8;
-            vertical-align: middle; /* Align links to middle */
-        }
-
-        a:hover {
-            text-decoration: underline;
-        }
-
-        body.light-mode a {
-            color: #4285f4;
-        }
-
-        /* Floating Buttons */
+        /* Buttons */
         #refreshButton, #modeButton {
             position: fixed;
             bottom: 20px;
-            padding: 10px 20px;
-            background-color: #4285f4;
+            padding: 10px;
+            background: #4285f4;
             color: #fff;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 14px; /* Slightly smaller buttons */
-            font-weight: bold;
-            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-            z-index: 100;
-        }
-
-        #refreshButton:hover, #modeButton:hover {
-            background-color: #306dc5;
-        }
-
-        #refreshButton {
-            left: 20px; /* Bottom-left corner */
         }
 
         #modeButton {
-            right: 20px; /* Bottom-right corner */
+            right: 30px;
         }
 
-        /* Floating Online List */
-        #onlineUsers {
-            position: fixed;
-            bottom: 80px; /* Keeps it above the refresh and mode buttons */
-            left: 20px;
-            width: 250px;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            border-radius: 8px;
-            padding: 10px;
-            font-size: 14px;
-            z-index: 1000;
-            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.5);
-        }
-
-        #onlineUsers h3 {
-            margin: 0 0 10px 0;
-            font-size: 16px;
-            text-align: center;
-            border-bottom: 1px solid #666;
-        }
-
-        #onlineUsers ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            max-height: 150px;
-            overflow-y: auto; /* Scrollable if too many users */
-        }
-
-        #onlineUsers li {
-            margin-bottom: 5px;
+        #refreshButton {
+            left: 30px;
         }
     </style>
 </head>
 <body>
     <h1>Video Links & Stream Status</h1>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Video Link</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="leftTable"></tbody>
+        </table>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Video Link</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="rightTable"></tbody>
+        </table>
+    </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Video Link</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody id="videoTableBody">
-            <!-- Table rows will be dynamically added here -->
-        </tbody>
-    </table>
-
-    <!-- Floating Buttons -->
     <button id="refreshButton">Refresh</button>
     <button id="modeButton">Light Mode</button>
 
-    <!-- Floating Online Users Container -->
-    <div id="onlineUsers">
-        <h3>Currently Online</h3>
-        <ul id="onlineList">
-            <!-- Online names will be dynamically added here -->
-        </ul>
-    </div>
-
     <script>
-        // Global video links array to improve refresh rate
-        let videoLinks = [];
+        // Mock data - replace with proper API fetch
+        var videoLinks = [];
 
         async function fetchVideoLinks() {
             try {
-                const response = await fetch('video-links.json');
+                const response = await fetch("video-links.json");
                 videoLinks = await response.json();
-                return videoLinks;
+                populateTables(videoLinks);
             } catch (error) {
-                console.error('Error fetching video links:', error);
-                return [];
+                console.error(error);
             }
         }
 
-        async function populateTable() {
-            if (videoLinks.length === 0) await fetchVideoLinks(); // Fetch links if not already loaded
-
-            const tableBody = document.getElementById('videoTableBody');
-            tableBody.innerHTML = ''; // Clear existing rows
-
-            videoLinks.forEach(video => {
-                const row = document.createElement('tr');
-
-                const nameCell = document.createElement('td');
-                nameCell.textContent = video.name;
-                row.appendChild(nameCell);
-
-                const linkCell = document.createElement('td');
-                const linkAnchor = document.createElement('a');
-                linkAnchor.href = video.url;
-                linkAnchor.textContent = video.url;
-                linkAnchor.target = '_blank';
-                linkCell.appendChild(linkAnchor);
-                row.appendChild(linkCell);
-
-                const statusCell = document.createElement('td');
-                statusCell.className = 'status checking';
-                statusCell.textContent = 'Checking...';
-                row.appendChild(statusCell);
-
-                tableBody.appendChild(row);
-
-                checkVideoStatus(video.url, statusCell);
-            });
+        function divideInTwoAlphabetically(sorted) {
+            let half = Math.ceil(sorted.length / 2);
+            return [sorted.slice(0, half), sorted.slice(half)];
         }
 
-        async function checkVideoStatus(url, statusCell) {
-            try {
-                if (url.includes('twitch.tv')) {
-                    const username = url.split('twitch.tv/')[1];
-                    const isLive = await checkTwitchStatus(username);
-                    updateStatusAndOnlineList(isLive, statusCell);
-                } else if (url.includes('kick.com')) {
-                    const username = url.split('kick.com/')[1];
-                    const isLive = await checkKickStatus(username);
-                    updateStatusAndOnlineList(isLive, statusCell);
-                } else {
-                    checkVideoLink(url, statusCell);
-                }
-            } catch (error) {
-                console.error(`Error checking status for ${url}:`, error);
-                updateStatusAndOnlineList(false, statusCell);
-            }
+        async function populateTables() {
+            // Sort alphabetically
+            videoLinks.sort((x, b) => x.name.localeCompare(b, location,false,/represented.));
         }
-
-        async function updateStatusAndOnlineList(isOnline, statusCell) {
-            updateStatusCell(isOnline, statusCell);
-            updateOnlineList();
-        }
-
-        function updateStatusCell(isOnline, statusCell) {
-            statusCell.className = `status ${isOnline ? 'online' : 'offline'}`;
-            statusCell.textContent = isOnline ? 'Online' : 'Offline';
-        }
-
-        function updateOnlineList() {
-            const onlineList = document.getElementById('onlineList');
-            onlineList.innerHTML = ''; // Clear the existing list
-
-            const onlineRows = document.querySelectorAll('.status.online');
-            onlineRows.forEach((statusCell) => {
-                const row = statusCell.parentNode; // Get the parent <tr>
-                const name = row.querySelector('td:first-child').textContent;
-                const listItem = document.createElement('li');
-                listItem.textContent = name;
-                onlineList.appendChild(listItem);
-            });
-
-            if (onlineList.innerHTML === '') {
-                const emptyMsg = document.createElement('li');
-                emptyMsg.textContent = 'Nobody is online';
-                onlineList.appendChild(emptyMsg);
-            }
-        }
-
-        async function checkTwitchStatus(username) {
-            try {
-                const response = await fetch(`https://www.twitch.tv/${username}`);
-                const html = await response.text();
-                return html.includes(`"isLiveBroadcast":true`);
-            } catch {
-                return false;
-            }
-        }
-
-        async function checkKickStatus(username) {
-            try {
-                const response = await fetch(`https://kick.com/api/v2/channels/${username}`);
-                const data = await response.json();
-                return data?.livestream?.is_live ?? false;
-            } catch {
-                return false;
-            }
-        }
-
-        function checkVideoLink(url, statusCell) {
-            const video = document.createElement('video');
-            video.onloadeddata = () => updateStatusAndOnlineList(true, statusCell);
-            video.onerror = () => updateStatusAndOnlineList(false, statusCell);
-            video.src = url;
-        }
-
-        const modeButton = document.getElementById('modeButton');
-        modeButton.addEventListener('click', () => {
-            document.body.classList.toggle('light-mode');
-            modeButton.textContent = document.body.classList.contains('light-mode') ? 'Dark Mode' : 'Light Mode';
-        });
-
-        document.getElementById('refreshButton').addEventListener('click', populateTable);
-
-        populateTable();
-    </script>
-</body>
-</html>
