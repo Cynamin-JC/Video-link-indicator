@@ -75,18 +75,6 @@
             background: #eef;
         }
 
-        .alphabet-indicator {
-            font-size: 11px;
-            font-weight: bold;
-            color: #aaa;
-            text-transform: uppercase;
-            padding: 5px 10px;
-        }
-
-        body.light-mode .alphabet-indicator {
-            color: #666;
-        }
-
         .status {
             display: inline-block;
             padding: 3px 8px;
@@ -126,6 +114,7 @@
         .link-button:hover {
             background-color: #306dc5;
             transform: scale(1.05);
+            text-decoration: none;
         }
 
         body.light-mode .link-button {
@@ -165,6 +154,7 @@
             color: white;
             border-radius: 8px;
             padding: 15px;
+            font-size: 14px;
             box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3);
             z-index: 1000;
         }
@@ -194,7 +184,6 @@
             padding: 5px 10px;
         }
 
-        /* Video Player Floating Window */
         #floatingVideoPlayer {
             position: fixed;
             bottom: 120px;
@@ -259,9 +248,19 @@
         </table>
     </div>
 
+    <!-- Refresh Button and Light Mode -->
     <button id="refreshButton">Refresh</button>
     <button id="modeButton">Light Mode</button>
 
+    <!-- Floating Online Users -->
+    <div id="onlineUsers">
+        <h3>Online Now</h3>
+        <ul id="onlineList">
+            <li>No one is online</li>
+        </ul>
+    </div>
+
+    <!-- Video Player Floating Window -->
     <div id="floatingVideoPlayer">
         <video id="videoPlayer" controls autoplay></video>
         <button id="closeVideoPlayer">Close Player</button>
@@ -311,16 +310,19 @@
                     row.appendChild(statusCell);
 
                     currentTable.appendChild(row);
+                    checkVideoStatus(video.url, statusCell);
                 });
             });
         }
 
+        // Play video in floating player
         function playVideo(url) {
             const videoElement = document.getElementById('videoPlayer');
             videoElement.src = url;
             document.getElementById('floatingVideoPlayer').style.display = 'flex';
         }
 
+        // Close and stop the video player
         document.getElementById('closeVideoPlayer').addEventListener('click', () => {
             const videoElement = document.getElementById('videoPlayer');
             videoElement.pause();
@@ -328,6 +330,61 @@
             document.getElementById('floatingVideoPlayer').style.display = 'none';
         });
 
+        // Check video status and update online/offline
+        async function checkVideoStatus(url, statusCell) {
+            try {
+                if (url.includes('twitch.tv')) {
+                    const username = url.split('twitch.tv/')[1];
+                    const isLive = await checkTwitchStatus(username);
+                    updateStatusCell(isLive, statusCell);
+                } else if (url.includes('kick.com')) {
+                    const username = url.split('kick.com/')[1];
+                    const isLive = await checkKickStatus(username);
+                    updateStatusCell(isLive, statusCell);
+                } else {
+                    updateStatusCell(true, statusCell); // Assume always online for direct video links
+                }
+            } catch (error) {
+                console.error(`Error checking status for ${url}:`, error);
+                updateStatusCell(false, statusCell);
+            }
+        }
+
+        // Dynamically update status cell and online user list
+        function updateStatusCell(isOnline, statusCell) {
+            statusCell.className = `status ${isOnline ? "online" : "offline"}`;
+            statusCell.textContent = isOnline ? 'Online' : 'Offline';
+            updateOnlineList();
+        }
+
+        // Fetch and update the online list dynamically
+        function updateOnlineList() {
+            const onlineList = document.getElementById('onlineList');
+            onlineList.innerHTML = '';
+            const onlineStatusCells = document.querySelectorAll('.status.online');
+
+            if (onlineStatusCells.length === 0) {
+                const noOneOnline = document.createElement('li');
+                noOneOnline.textContent = 'No one is online';
+                onlineList.appendChild(noOneOnline);
+            } else {
+                onlineStatusCells.forEach(cell => {
+                    const videoRow = cell.parentNode;
+                    const name = videoRow.querySelector('td:first-child').textContent;
+                    const videoUrl = videoRow.querySelector('.link-button').textContent;
+                    const listItem = document.createElement('li');
+                    listItem.innerHTML = `<span>${name}</span>`;
+                    const watchButton = document.createElement('button');
+                    watchButton.textContent = 'Watch';
+                    watchButton.className = 'link-button';
+                    watchButton.addEventListener('click', () => playVideo(videoUrl));
+                    listItem.appendChild(watchButton);
+                    onlineList.appendChild(listItem);
+                });
+            }
+        }
+
+        // Fetch and initialize everything
         populateTables();
     </script>
 </body>
