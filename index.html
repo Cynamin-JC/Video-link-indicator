@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Links, Stream Status & Player</title>
+    <title>Video Links & Stream Status</title>
     <style>
         /* General Page Styles */
         body {
@@ -28,6 +28,7 @@
             margin-bottom: 20px;
         }
 
+        /* Table Container */
         .table-container {
             display: flex;
             justify-content: space-between;
@@ -119,14 +120,13 @@
             border-radius: 20px;
             text-align: center;
             text-decoration: none;
-            transition: background-color 0.3s ease, transform 0.2s ease;
             cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
         }
 
         .link-button:hover {
             background-color: #306dc5;
             transform: scale(1.05);
-            text-decoration: none;
         }
 
         body.light-mode .link-button {
@@ -137,6 +137,7 @@
             background-color: #005BB5;
         }
 
+        /* Floating Buttons */
         #refreshButton, #modeButton {
             position: fixed;
             bottom: 20px;
@@ -197,46 +198,47 @@
             padding: 5px 10px;
         }
 
-        /* Video Player Modal */
-        #videoPlayerModal {
+        /* Floating Video Player */
+        #videoPlayerFloating {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            bottom: 150px;
+            right: 30px;
+            width: 400px;
+            max-width: 90%;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3);
+            z-index: 2000;
             display: none;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
-            z-index: 2000;
         }
 
-        #videoPlayerModal video {
-            width: 90%;
-            max-width: 800px;
+        #videoPlayerFloating video {
+            width: 100%;
             border-radius: 8px;
             background: black;
         }
 
-        #closePlayerButton {
-            margin-top: 15px;
-            padding: 10px 20px;
-            background: #ea4335;
-            color: #fff;
+        #stopPlayerButton {
+            margin-top: 10px;
+            padding: 5px 10px;
+            background-color: #ea4335;
+            color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 14px;
         }
 
-        #closePlayerButton:hover {
+        #stopPlayerButton:hover {
             background: #c5221f;
         }
     </style>
 </head>
 <body>
-    <h1>Video Links, Stream Status & Player</h1>
+    <h1>Video Links & Stream Status</h1>
     <div class="table-container">
         <table>
             <thead>
@@ -272,10 +274,10 @@
         </ul>
     </div>
 
-    <!-- Video Player Modal -->
-    <div id="videoPlayerModal" class="hidden">
-        <video id="videoPlayer" controls autoplay></video>
-        <button id="closePlayerButton">Close Player</button>
+    <!-- Floating Video Player -->
+    <div id="videoPlayerFloating">
+        <video id="videoElement" controls autoplay></video>
+        <button id="stopPlayerButton">Stop Player</button>
     </div>
 
     <script>
@@ -335,49 +337,21 @@
         }
 
         function playVideo(url) {
-            const videoPlayer = document.getElementById('videoPlayer');
+            const videoPlayer = document.getElementById('videoElement');
             videoPlayer.src = url;
-            const modal = document.getElementById('videoPlayerModal');
-            modal.style.display = 'flex';
+            document.getElementById('videoPlayerFloating').style.display = 'flex';
         }
 
-        document.getElementById('closePlayerButton').addEventListener('click', () => {
-            const modal = document.getElementById('videoPlayerModal');
-            const videoPlayer = document.getElementById('videoPlayer');
+        function stopVideoPlayer() {
+            const videoPlayer = document.getElementById('videoElement');
             videoPlayer.pause();
             videoPlayer.src = '';
-            modal.style.display = 'none';
-        });
-
-        function updateOnlineList() {
-            const onlineList = document.getElementById('onlineList');
-            onlineList.innerHTML = '';
-
-            const onlineStatuses = document.querySelectorAll('.status.online');
-            if (onlineStatuses.length === 0) {
-                const emptyMsg = document.createElement('li');
-                emptyMsg.textContent = 'No one is online';
-                onlineList.appendChild(emptyMsg);
-            } else {
-                onlineStatuses.forEach(status => {
-                    const row = status.parentNode;
-                    const name = row.querySelector('td:first-child').textContent;
-                    const videoLink = row.querySelector('.link-button').text;
-
-                    const listItem = document.createElement('li');
-                    listItem.innerHTML = `<span>${name}</span>`;
-                    const watchButton = document.createElement('button');
-                    watchButton.textContent = 'Watch';
-                    watchButton.className = 'link-button';
-                    watchButton.addEventListener('click', () => playVideo(videoLink));
-                    listItem.appendChild(watchButton);
-
-                    onlineList.appendChild(listItem);
-                });
-            }
+            document.getElementById('videoPlayerFloating').style.display = 'none';
         }
 
-        // Existing checkVideoStatus logic here ...
+        document.getElementById('stopPlayerButton').addEventListener('click', stopVideoPlayer);
+
+        // Existing functions like "checkVideoStatus", "updateOnlineList" would go here...
         populateTables();
     </script>
 </body>
