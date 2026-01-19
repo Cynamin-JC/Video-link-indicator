@@ -475,13 +475,23 @@
             localStorage.setItem('videoLinks', JSON.stringify(videoLinks));
         }
 
-        // Process promises in batches to limit concurrency
+        // Process promises in batches to limit concurrency, with timeout per batch
         async function processInBatches(promises, batchSize = 10) {
             const results = [];
             for (let i = 0; i < promises.length; i += batchSize) {
                 const batch = promises.slice(i, i + batchSize);
-                const batchResults = await Promise.all(batch);
-                results.push(...batchResults);
+                const batchPromises = batch.map(fn => fn());
+                try {
+                    const batchResults = await Promise.race([
+                        Promise.all(batchPromises),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Batch timeout')), 30000)) // 30-second timeout per batch
+                    ]);
+                    results.push(...batchResults);
+                } catch (error) {
+                    console.error('Batch timed out, skipping to next:', error);
+                    // Mark remaining as offline or skip
+                    batch.forEach(() => results.push(false));
+                }
             }
             return results;
         }
@@ -560,7 +570,7 @@
                 });
             });
 
-            // Run all status checks in batches of 10 for balanced speed and reliability
+            // Run all status checks in batches of 10 with 30-second timeout per batch
             await processInBatches(statusPromises.map(fn => fn()), 10);
         }
 
