@@ -443,7 +443,7 @@
                         updateStatusCell(false, statusCell); // Timeout: assume offline
                         resolve();
                     }
-                }, 3000); // 3-second timeout for live streams
+                }, 10000); // Increased to 10 seconds for live streams
 
                 video.onloadeddata = () => {
                     if (!resolved) {
