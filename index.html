@@ -475,17 +475,6 @@
             localStorage.setItem('videoLinks', JSON.stringify(videoLinks));
         }
 
-        // Process promises in batches to limit concurrency
-        async function processInBatches(promises, batchSize = 10) {
-            const results = [];
-            for (let i = 0; i < promises.length; i += batchSize) {
-                const batch = promises.slice(i, i + batchSize);
-                const batchResults = await Promise.all(batch);
-                results.push(...batchResults);
-            }
-            return results;
-        }
-
         async function populateTables() {
             const leftTable = document.getElementById('leftTable');
             const rightTable = document.getElementById('rightTable');
@@ -498,7 +487,7 @@
 
             updateOnlineList();
 
-            // Collect all status check promises for batched execution
+            // Collect all status check promises for parallel execution (back to full parallel without batching)
             const statusPromises = [];
 
             columns.forEach((group, index) => {
@@ -555,13 +544,13 @@
                     // Store reference to direct button for later
                     statusCell.directButton = directButton;
 
-                    // Collect promise for batched execution
-                    statusPromises.push(() => checkVideoStatus(video.url, statusCell));
+                    // Collect promise for parallel execution
+                    statusPromises.push(checkVideoStatus(video.url, statusCell));
                 });
             });
 
-            // Run all status checks in batches of 10 for balanced speed and reliability
-            await processInBatches(statusPromises.map(fn => fn()), 10);
+            // Run all status checks in parallel (back to the method before batching)
+            Promise.all(statusPromises).catch(err => console.error('Status check error:', err));
         }
 
         function updateOnlineList() {
@@ -611,7 +600,8 @@
                     const isLive = await checkKickStatus(username);
                     updateStatusCell(isLive, statusCell);
                 } else {
-                    await checkVideoLink(url, statusCell);
+                    const isOnline = await checkVideoLink(url);
+                    updateStatusCell(isOnline, statusCell);
                 }
             } catch (error) {
                 console.error(`Error checking status for ${url}:`, error);
@@ -629,39 +619,13 @@
             updateOnlineList();
         }
 
-        async function checkVideoLink(url, statusCell) {
-            return new Promise((resolve) => {
-                const video = document.createElement('video');
-                let resolved = false;
-
-                const timeout = setTimeout(() => {
-                    if (!resolved) {
-                        resolved = true;
-                        updateStatusCell(false, statusCell); // Timeout: assume offline
-                        resolve();
-                    }
-                }, 10000); // 10 seconds for live streams
-
-                video.onloadeddata = () => {
-                    if (!resolved) {
-                        clearTimeout(timeout);
-                        resolved = true;
-                        updateStatusCell(true, statusCell); // Metadata loaded: online
-                        resolve();
-                    }
-                };
-
-                video.onerror = () => {
-                    if (!resolved) {
-                        clearTimeout(timeout);
-                        resolved = true;
-                        updateStatusCell(false, statusCell); // Error: offline
-                        resolve();
-                    }
-                };
-
-                video.src = url;
-            });
+        async function checkVideoLink(url) {
+            try {
+                const response = await fetchWithTimeout(url, { method: 'HEAD' }, 5000); // HEAD request with 5-second timeout
+                return response.ok; // True if 200 OK
+            } catch (error) {
+                return false; // Offline if error or timeout
+            }
         }
 
         async function checkTwitchStatus(username) {
@@ -686,7 +650,7 @@
           }
         }
 
-        // Utility function for fetch with timeout (for API calls only)
+        // Utility function for fetch with timeout
         async function fetchWithTimeout(url, options = {}, timeout = 5000) {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), timeout);
