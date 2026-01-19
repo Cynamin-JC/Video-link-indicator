@@ -293,6 +293,7 @@
                     linkButton.target = '_blank';
                     linkButton.textContent = 'Watch';
                     linkButton.className = 'link-button';
+                    linkButton.setAttribute('data-video-src', video.url); // Added for floating video player
                     linkCell.appendChild(linkButton);
                     row.appendChild(linkCell);
 
@@ -329,6 +330,7 @@
                     watchButton.target = '_blank';
                     watchButton.textContent = 'Watch';
                     watchButton.className = 'link-button';
+                    watchButton.setAttribute('data-video-src', videoLink); // Added for floating video player
                     listItem.appendChild(watchButton);
 
                     onlineList.appendChild(listItem);
