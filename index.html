@@ -385,6 +385,10 @@
     </div>
 
     <script>
+        // Easy-to-change login credentials
+        const ADMIN_USERNAME = 'admin';
+        const ADMIN_PASSWORD = 'password';
+
         let videoLinks = [];
         let isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
         let isVideoLoading = false; // Global flag to prioritize video player over status checks
@@ -663,7 +667,7 @@
         document.getElementById('loginSubmit').addEventListener('click', () => {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-            if (username === 'admin' && password === 'password') {
+            if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
                 isLoggedIn = true;
                 localStorage.setItem('isLoggedIn', 'true');
                 updateLoginSection();
