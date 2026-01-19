@@ -264,6 +264,9 @@
 
             updateOnlineList();
 
+            // Collect all status check promises for parallel execution
+            const statusPromises = [];
+
             columns.forEach((group, index) => {
                 const currentTable = index === 0 ? leftTable : rightTable;
                 let currentLetter = '';
@@ -304,9 +307,14 @@
                     row.appendChild(statusCell);
 
                     currentTable.appendChild(row);
-                    checkVideoStatus(video.url, statusCell);
+
+                    // Instead of calling checkVideoStatus here, collect the promise
+                    statusPromises.push(checkVideoStatus(video.url, statusCell));
                 });
             });
+
+            // Run all status checks in parallel for faster population
+            Promise.all(statusPromises).catch(err => console.error('Batch status check error:', err));
         }
 
         function updateOnlineList() {
