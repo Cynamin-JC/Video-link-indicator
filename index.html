@@ -635,16 +635,8 @@
                 const video = document.createElement('video');
                 let resolved = false;
 
-                const timeout = setTimeout(() => {
-                    if (!resolved) {
-                        resolved = true;
-                        resolve(false); // Timeout: assume offline
-                    }
-                }, 10000); // 10 seconds for live streams
-
                 video.onloadeddata = () => {
                     if (!resolved) {
-                        clearTimeout(timeout);
                         resolved = true;
                         resolve(true); // Metadata loaded: online
                     }
@@ -652,7 +644,6 @@
 
                 video.onerror = () => {
                     if (!resolved) {
-                        clearTimeout(timeout);
                         resolved = true;
                         resolve(false); // Error: offline
                     }
