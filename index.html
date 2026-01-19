@@ -388,6 +388,7 @@
         let videoLinks = [];
         let isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
         let isVideoLoading = false; // Global flag to prioritize video player over status checks
+        let isPopulating = false; // Flag to prevent overlapping populateTables calls
 
         // Load links from localStorage or fetch from JSON
         async function loadVideoLinks() {
@@ -436,6 +437,9 @@
         }
 
         async function populateTables() {
+            if (isPopulating) return; // Prevent overlapping calls
+            isPopulating = true;
+
             const leftTable = document.getElementById('leftTable');
             const rightTable = document.getElementById('rightTable');
             leftTable.innerHTML = '';
@@ -511,6 +515,8 @@
 
             // Run all status checks in batches of 10 with 15-second timeout per batch
             await processInBatches(statusPromises.map(fn => fn()), 10);
+
+            isPopulating = false; // Allow new calls
         }
 
         function updateOnlineList() {
