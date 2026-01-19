@@ -487,7 +487,7 @@
 
             updateOnlineList();
 
-            // Collect all status check promises for parallel execution (back to full parallel without batching)
+            // Collect all status check promises for parallel execution
             const statusPromises = [];
 
             columns.forEach((group, index) => {
@@ -549,7 +549,7 @@
                 });
             });
 
-            // Run all status checks in parallel (back to the method before batching)
+            // Run all status checks in parallel
             Promise.all(statusPromises).catch(err => console.error('Status check error:', err));
         }
 
@@ -620,12 +620,35 @@
         }
 
         async function checkVideoLink(url) {
-            try {
-                const response = await fetchWithTimeout(url, { method: 'HEAD' }, 5000); // HEAD request with 5-second timeout
-                return response.ok; // True if 200 OK
-            } catch (error) {
-                return false; // Offline if error or timeout
-            }
+            return new Promise((resolve) => {
+                const video = document.createElement('video');
+                let resolved = false;
+
+                const timeout = setTimeout(() => {
+                    if (!resolved) {
+                        resolved = true;
+                        resolve(false); // Timeout: assume offline
+                    }
+                }, 5000); // 5-second timeout for live streams
+
+                video.onloadeddata = () => {
+                    if (!resolved) {
+                        clearTimeout(timeout);
+                        resolved = true;
+                        resolve(true); // Metadata loaded: online
+                    }
+                };
+
+                video.onerror = () => {
+                    if (!resolved) {
+                        clearTimeout(timeout);
+                        resolved = true;
+                        resolve(false); // Error: offline
+                    }
+                };
+
+                video.src = url;
+            });
         }
 
         async function checkTwitchStatus(username) {
