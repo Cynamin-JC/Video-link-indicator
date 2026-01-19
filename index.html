@@ -469,7 +469,7 @@
                 try {
                     const batchResults = await Promise.race([
                         Promise.all(batchPromises),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('Batch timeout')), 5000)) // 5-second timeout per batch
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Batch timeout')), 15000)) // 15-second timeout per batch
                     ]);
                     results.push(...batchResults);
                 } catch (error) {
@@ -555,7 +555,7 @@
                 });
             });
 
-            // Run all status checks in batches of 10 with 5-second timeout per batch
+            // Run all status checks in batches of 10 with 15-second timeout per batch
             await processInBatches(statusPromises.map(fn => fn()), 10);
         }
 
