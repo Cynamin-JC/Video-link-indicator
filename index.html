@@ -196,6 +196,55 @@
             font-size: 12px;
             padding: 5px 10px;
         }
+
+        /* Floating Video Player Styles */
+        #floating-video-player {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 320px;
+            background: #2e2e2e;
+            border: 2px solid #4285f4;
+            border-radius: 8px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            z-index: 1000;
+            cursor: move; /* Indicates it's grabbable */
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        body.light-mode #floating-video-player {
+            background: #fff;
+            border-color: #007AFF;
+        }
+
+        #floating-video-player video {
+            width: 100%;
+            border-radius: 4px;
+        }
+
+        #floating-video-player button {
+            margin-top: 5px;
+            padding: 5px 10px;
+            background: #4285f4;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        #floating-video-player button:hover {
+            background: #306dc5;
+        }
+
+        body.light-mode #floating-video-player button {
+            background: #007AFF;
+        }
+
+        body.light-mode #floating-video-player button:hover {
+            background: #005BB5;
+        }
     </style>
 </head>
 <body>
@@ -422,6 +471,10 @@
         
         // Add the floating video player logic here:
         document.addEventListener('DOMContentLoaded', () => {
+            let isDragging = false;
+            let dragOffsetX = 0;
+            let dragOffsetY = 0;
+
             document.body.addEventListener('click', (event) => {
                 const link = event.target;
 
@@ -440,19 +493,46 @@
                                 <source src="" type="video/mp4">
                                 Your browser does not support the video tag.
                             </video>
+                            <button id="fullscreen-btn">Full Screen</button>
                             <button id="close-video-player">Close</button>
                         `;
 
-                        videoPlayer.style.position = 'fixed';
-                        videoPlayer.style.bottom = '20px';
-                        videoPlayer.style.right = '20px';
-                        videoPlayer.style.zIndex = '1000';
-                        videoPlayer.style.backgroundColor = '#fff';
-                        videoPlayer.style.boxShadow = '0px 4px 6px rgba(0,0,0,0.1)';
-                        videoPlayer.style.padding = '10px';
-                        videoPlayer.style.borderRadius = '8px';
-
                         document.body.appendChild(videoPlayer);
+
+                        // Add drag functionality
+                        videoPlayer.addEventListener('mousedown', (e) => {
+                            if (e.target.tagName === 'VIDEO' || e.target.tagName === 'BUTTON') return; // Don't drag on video or buttons
+                            isDragging = true;
+                            dragOffsetX = e.clientX - videoPlayer.offsetLeft;
+                            dragOffsetY = e.clientY - videoPlayer.offsetTop;
+                            videoPlayer.style.cursor = 'grabbing';
+                        });
+
+                        document.addEventListener('mousemove', (e) => {
+                            if (isDragging) {
+                                videoPlayer.style.left = `${e.clientX - dragOffsetX}px`;
+                                videoPlayer.style.top = `${e.clientY - dragOffsetY}px`;
+                                videoPlayer.style.right = 'auto'; // Reset right positioning
+                                videoPlayer.style.bottom = 'auto'; // Reset bottom positioning
+                            }
+                        });
+
+                        document.addEventListener('mouseup', () => {
+                            isDragging = false;
+                            videoPlayer.style.cursor = 'move';
+                        });
+
+                        // Add full screen functionality
+                        document.getElementById('fullscreen-btn').addEventListener('click', () => {
+                            const video = document.getElementById('floating-video');
+                            if (video.requestFullscreen) {
+                                video.requestFullscreen().catch(err => console.error('Full screen error:', err));
+                            } else if (video.webkitRequestFullscreen) { // Safari
+                                video.webkitRequestFullscreen();
+                            } else if (video.msRequestFullscreen) { // IE/Edge
+                                video.msRequestFullscreen();
+                            }
+                        });
 
                         document.getElementById('close-video-player').addEventListener('click', () => {
                             videoPlayer.remove();
