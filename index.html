@@ -554,12 +554,6 @@
         }
 
         async function checkVideoStatus(url, statusCell) {
-            // Defer status check if video is loading to prioritize video player
-            if (isVideoLoading) {
-                setTimeout(() => checkVideoStatus(url, statusCell), 100);
-                return;
-            }
-
             try {
                 if (url.includes('twitch.tv')) {
                     const username = url.split('twitch.tv/')[1];
@@ -728,7 +722,7 @@
                     event.preventDefault();
                     const videoSrc = link.getAttribute('data-video-src');
 
-                    isVideoLoading = true; // Set flag to prioritize video loading
+                    isVideoLoading = true; // Set flag to prioritize video player over status checks
 
                     let videoPlayer = document.getElementById('floating-video-player');
                     if (!videoPlayer) {
