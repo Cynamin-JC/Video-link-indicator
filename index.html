@@ -237,6 +237,7 @@
 
     <script>
         let videoLinks = [];
+        let isVideoLoading = false; // Global flag to prioritize video player over status checks
 
         async function fetchVideoLinks() {
             try {
@@ -339,6 +340,12 @@
         }
 
         async function checkVideoStatus(url, statusCell) {
+            // Defer status check if video is loading to prioritize video player
+            if (isVideoLoading) {
+                setTimeout(() => checkVideoStatus(url, statusCell), 100);
+                return;
+            }
+
             try {
                 if (url.includes('twitch.tv')) {
                     const username = url.split('twitch.tv/')[1];
@@ -414,6 +421,8 @@
                     event.preventDefault();
                     const videoSrc = link.getAttribute('data-video-src');
 
+                    isVideoLoading = true; // Set flag to prioritize video loading
+
                     let videoPlayer = document.getElementById('floating-video-player');
                     if (!videoPlayer) {
                         videoPlayer = document.createElement('div');
@@ -437,7 +446,10 @@
 
                         document.body.appendChild(videoPlayer);
 
-                        document.getElementById('close-video-player').addEventListener('click', () => videoPlayer.remove());
+                        document.getElementById('close-video-player').addEventListener('click', () => {
+                            videoPlayer.remove();
+                            isVideoLoading = false; // Reset flag when player closes
+                        });
                     }
 
                     const videoElement = document.getElementById('floating-video');
@@ -445,7 +457,12 @@
                         const sourceElement = videoElement.querySelector('source');
                         sourceElement.src = videoSrc;
                         videoElement.load();
-                        videoElement.play().catch(err => console.error('Play failed:', err));
+                        videoElement.play().catch(err => {
+                            console.error('Play failed:', err);
+                            isVideoLoading = false; // Reset on error
+                        }).then(() => {
+                            isVideoLoading = false; // Reset after successful play
+                        });
                     }
                 }
             });
