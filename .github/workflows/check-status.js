@@ -5,6 +5,8 @@ const { URL } = require('url');
 
 // Constants
 const TWITCH_LIVE_INDICATOR = '"isLiveBroadcast":true';
+const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
+const MAX_RESPONSE_SIZE = 1024 * 1024; // 1MB limit for response data
 
 // Read video-links.json
 const videoLinksPath = './video-links.json';
@@ -13,36 +15,42 @@ const videoLinks = JSON.parse(fs.readFileSync(videoLinksPath, 'utf8'));
 // Helper function to make HTTP/HTTPS requests with timeout
 function makeRequest(url, timeout = 5000) {
   return new Promise((resolve) => {
-    const urlObj = new URL(url);
-    const protocol = urlObj.protocol === 'https:' ? https : http;
-    
-    const options = {
-      hostname: urlObj.hostname,
-      port: urlObj.port,
-      path: urlObj.pathname + urlObj.search,
-      method: 'HEAD',
-      timeout: timeout,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
-    };
+    try {
+      const urlObj = new URL(url);
+      const protocol = urlObj.protocol === 'https:' ? https : http;
+      
+      const options = {
+        hostname: urlObj.hostname,
+        port: urlObj.port,
+        path: urlObj.pathname + urlObj.search,
+        method: 'HEAD',
+        timeout: timeout,
+        headers: {
+          'User-Agent': USER_AGENT
+        }
+      };
 
-    const req = protocol.request(options, (res) => {
-      // For video files, accept 200 or 206 (partial content)
-      resolve(res.statusCode === 200 || res.statusCode === 206);
-      req.destroy();
-    });
+      const req = protocol.request(options, (res) => {
+        // For video files, accept 200 or 206 (partial content)
+        resolve(res.statusCode === 200 || res.statusCode === 206);
+        req.destroy();
+      });
 
-    req.on('error', () => {
+      req.on('error', () => {
+        resolve(false);
+      });
+
+      req.on('timeout', () => {
+        req.destroy();
+        resolve(false);
+      });
+
+      req.end();
+    } catch (error) {
+      // Handle invalid URL errors
+      console.error(`Invalid URL: ${url}`, error.message);
       resolve(false);
-    });
-
-    req.on('timeout', () => {
-      req.destroy();
-      resolve(false);
-    });
-
-    req.end();
+    }
   });
 }
 
@@ -71,15 +79,25 @@ async function checkTwitchStatus(username) {
     return new Promise((resolve) => {
       https.get(url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          'User-Agent': USER_AGENT
         },
         timeout: 5000
       }, (res) => {
-        let data = '';
+        const chunks = [];
+        let dataSize = 0;
         
         res.on('data', (chunk) => {
-          data += chunk;
-          // Early exit if we find the indicator
+          dataSize += chunk.length;
+          // Limit response size to prevent memory issues
+          if (dataSize > MAX_RESPONSE_SIZE) {
+            res.destroy();
+            resolve(false);
+            return;
+          }
+          
+          chunks.push(chunk);
+          // Check if we found the indicator in accumulated data
+          const data = Buffer.concat(chunks).toString();
           if (data.includes(TWITCH_LIVE_INDICATOR)) {
             res.destroy();
             resolve(true);
@@ -87,6 +105,7 @@ async function checkTwitchStatus(username) {
         });
         
         res.on('end', () => {
+          const data = Buffer.concat(chunks).toString();
           resolve(data.includes(TWITCH_LIVE_INDICATOR));
         });
       }).on('error', () => {
@@ -112,18 +131,27 @@ async function checkKickStatus(username) {
     return new Promise((resolve) => {
       https.get(url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          'User-Agent': USER_AGENT
         },
         timeout: 5000
       }, (res) => {
-        let data = '';
+        const chunks = [];
+        let dataSize = 0;
         
         res.on('data', (chunk) => {
-          data += chunk;
+          dataSize += chunk.length;
+          // Limit response size to prevent memory issues
+          if (dataSize > MAX_RESPONSE_SIZE) {
+            res.destroy();
+            resolve(false);
+            return;
+          }
+          chunks.push(chunk);
         });
         
         res.on('end', () => {
           try {
+            const data = Buffer.concat(chunks).toString();
             const json = JSON.parse(data);
             resolve(json?.livestream?.is_live === true);
           } catch {
