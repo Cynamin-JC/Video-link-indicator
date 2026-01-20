@@ -136,11 +136,21 @@ async function getStreamStatus(video) {
   
   try {
     if (url.includes('twitch.tv')) {
-      const username = url.split('twitch.tv/')[1];
+      const parts = url.split('twitch.tv/');
+      if (parts.length < 2 || !parts[1]) {
+        console.error(`Invalid Twitch URL format: ${url}`);
+        return 'offline';
+      }
+      const username = parts[1];
       const isLive = await checkTwitchStatus(username);
       return isLive ? 'online' : 'offline';
     } else if (url.includes('kick.com')) {
-      const username = url.split('kick.com/')[1];
+      const parts = url.split('kick.com/');
+      if (parts.length < 2 || !parts[1]) {
+        console.error(`Invalid Kick URL format: ${url}`);
+        return 'offline';
+      }
+      const username = parts[1];
       const isLive = await checkKickStatus(username);
       return isLive ? 'online' : 'offline';
     } else {

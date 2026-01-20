@@ -486,7 +486,15 @@
                     const status = video.status || 'checking';
                     const isOnline = status === 'online';
                     statusCell.className = `status ${status}`;
-                    statusCell.textContent = status === 'online' ? 'Online' : status === 'offline' ? 'Offline' : 'Checking...';
+                    
+                    // Set status text based on value
+                    if (status === 'online') {
+                        statusCell.textContent = 'Online';
+                    } else if (status === 'offline') {
+                        statusCell.textContent = 'Offline';
+                    } else {
+                        statusCell.textContent = 'Checking...';
+                    }
                     
                     // Show/hide Direct button based on status and login
                     directButton.style.display = (isOnline && isLoggedIn) ? 'inline-block' : 'none';
