@@ -2,8 +2,8 @@ name: Check Stream Status
 
 on:
   schedule:
-    # Run every 10 minutes to avoid rate limiting
-    - cron: '*/10 * * * *'
+    # Run every 15 minutes to avoid rate limiting (96 times per day)
+    - cron: '*/15 * * * *'
   workflow_dispatch: # Allow manual trigger
 
 permissions:

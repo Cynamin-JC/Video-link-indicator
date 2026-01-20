@@ -12,7 +12,7 @@ const videoLinks = JSON.parse(fs.readFileSync(videoLinksPath, 'utf8'));
 
 // Helper function to make HTTP/HTTPS requests with timeout
 function makeRequest(url, timeout = 5000) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const urlObj = new URL(url);
     const protocol = urlObj.protocol === 'https:' ? https : http;
     
@@ -141,7 +141,12 @@ async function getStreamStatus(video) {
         console.error(`Invalid Twitch URL format: ${url}`);
         return 'offline';
       }
-      const username = parts[1];
+      // Extract username only (before any additional path or query params)
+      const username = parts[1].split('/')[0].split('?')[0];
+      if (!username) {
+        console.error(`Could not extract Twitch username from: ${url}`);
+        return 'offline';
+      }
       const isLive = await checkTwitchStatus(username);
       return isLive ? 'online' : 'offline';
     } else if (url.includes('kick.com')) {
@@ -150,7 +155,12 @@ async function getStreamStatus(video) {
         console.error(`Invalid Kick URL format: ${url}`);
         return 'offline';
       }
-      const username = parts[1];
+      // Extract username only (before any additional path or query params)
+      const username = parts[1].split('/')[0].split('?')[0];
+      if (!username) {
+        console.error(`Could not extract Kick username from: ${url}`);
+        return 'offline';
+      }
       const isLive = await checkKickStatus(username);
       return isLive ? 'online' : 'offline';
     } else {
