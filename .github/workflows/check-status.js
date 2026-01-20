@@ -142,43 +142,56 @@ async function checkKickStatus(username) {
   }
 }
 
-// Determine status for a video link
+/**
+ * Determine status for a video link based on its URL type
+ * @param {Object} video - Video object with name and url properties
+ * @returns {Promise<string>} Status string: 'online', 'offline', or 'checking'
+ */
 async function getStreamStatus(video) {
   const url = video.url;
   
   try {
-    if (url.includes('twitch.tv')) {
-      const parts = url.split('twitch.tv/');
-      if (parts.length < 2 || !parts[1]) {
+    // Parse URL to safely check hostname
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname.toLowerCase();
+    
+    // Check if it's a Twitch stream
+    if (hostname === 'www.twitch.tv' || hostname === 'twitch.tv') {
+      const pathname = urlObj.pathname;
+      if (!pathname || pathname === '/') {
         console.error(`Invalid Twitch URL format: ${url}`);
         return 'offline';
       }
-      // Extract username only (before any additional path or query params)
-      const username = parts[1].split('/')[0].split('?')[0];
+      // Extract username (first path segment after /)
+      const username = pathname.split('/').filter(Boolean)[0];
       if (!username) {
         console.error(`Could not extract Twitch username from: ${url}`);
         return 'offline';
       }
       const isLive = await checkTwitchStatus(username);
       return isLive ? 'online' : 'offline';
-    } else if (url.includes('kick.com')) {
-      const parts = url.split('kick.com/');
-      if (parts.length < 2 || !parts[1]) {
+    }
+    
+    // Check if it's a Kick stream
+    if (hostname === 'kick.com' || hostname === 'www.kick.com') {
+      const pathname = urlObj.pathname;
+      if (!pathname || pathname === '/') {
         console.error(`Invalid Kick URL format: ${url}`);
         return 'offline';
       }
-      // Extract username only (before any additional path or query params)
-      const username = parts[1].split('/')[0].split('?')[0];
+      // Extract username (first path segment after /)
+      const username = pathname.split('/').filter(Boolean)[0];
       if (!username) {
         console.error(`Could not extract Kick username from: ${url}`);
         return 'offline';
       }
       const isLive = await checkKickStatus(username);
       return isLive ? 'online' : 'offline';
-    } else {
-      const isOnline = await checkVideoLink(url);
-      return isOnline ? 'online' : 'offline';
     }
+    
+    // Otherwise, check as a direct video link
+    const isOnline = await checkVideoLink(url);
+    return isOnline ? 'online' : 'offline';
   } catch (error) {
     console.error(`Error getting status for ${video.name}:`, error.message);
     return 'offline';
