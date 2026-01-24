@@ -368,15 +368,22 @@
             border-radius: 4px;
         }
 
-        #floating-video-player button {
+        #floating-video-player .controls {
+            display: flex;
+            align-items: center;
             margin-top: 5px;
-            padding: 5px 10px;
+            flex-wrap: wrap; /* Allow wrapping if needed */
+            gap: 5px; /* Space between controls */
+        }
+
+        #floating-video-player button {
+            padding: 4px 6px; /* Smaller padding for better fit */
             background: #4285f4;
             color: #fff;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 10px; /* Smaller font size */
         }
 
         #floating-video-player button:hover {
@@ -389,6 +396,11 @@
 
         body.light-mode #floating-video-player button:hover {
             background: #005BB5;
+        }
+
+        #floating-video-player input[type="range"] {
+            width: 60px; /* Fixed width for slider to fit */
+            margin: 0 5px;
         }
     </style>
 </head>
@@ -785,11 +797,11 @@
                                 <source src="" type="video/mp4">
                                 Your browser does not support the video tag.
                             </video>
-                            <div style="display: flex; align-items: center; margin-top: 5px;">
-                                <button id="mute-btn" style="margin-right: 10px;">Unmute</button>
-                                <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.5" style="margin-right: 10px;">
+                            <div class="controls" style="display: flex; align-items: center; margin-top: 5px;">
+                                <button id="mute-btn" style="margin-right: 5px;">Unmute</button>
+                                <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.5" style="margin-right: 5px;">
                                 <button id="fullscreen-btn">Full Screen</button>
-                                <button id="close-video-player" style="margin-left: 10px;">Close</button>
+                                <button id="close-video-player" style="margin-left: 5px;">Close</button>
                             </div>
                         `;
 
