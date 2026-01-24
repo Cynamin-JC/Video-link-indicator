@@ -639,10 +639,6 @@
                 .filter(Boolean);
         }
 
-        function getOnlineVideos() {
-            return videoLinks.filter(video => getStatusState(video.url) === 'online');
-        }
-
         function getStatusState(url) {
             return statusCache.get(url) ?? 'offline';
         }
@@ -858,7 +854,7 @@
         function triggerRefresh() {
             nextRefreshAt = Date.now() + AUTO_REFRESH_INTERVAL_MS;
             updateRefreshTimer();
-            populateTables({ preservePanels: true });
+            populateTables();
         }
 
         function loadFloatingVideo(videoSrc) {
@@ -930,17 +926,11 @@
             }
         }
 
-        async function populateTables({ preservePanels = false } = {}) {
+        async function populateTables() {
             if (isPopulating) return;
             isPopulating = true;
 
-            if (!preservePanels) {
-                statusCache = new Map();
-            } else {
-                const currentUrls = new Set(videoLinks.map(video => video.url));
-                statusCache = new Map([...statusCache].filter(([url]) => currentUrls.has(url)));
-            }
-
+            statusCache = new Map();
             statusCellMap = new Map();
 
             const leftTable = document.getElementById('leftTable');
@@ -1001,18 +991,14 @@
                     row.appendChild(linkCell);
 
                     const statusCell = document.createElement('td');
-                    const initialState = getStatusState(video.url);
-                    statusCell.className = `status ${initialState}`;
-                    statusCell.textContent = initialState === 'online' ? 'Online' : 'Offline';
+                    statusCell.className = 'status offline';
+                    statusCell.textContent = 'Offline';
                     statusCell.dataset.url = video.url;
                     row.appendChild(statusCell);
 
                     currentTable.appendChild(row);
 
                     statusCell.directButton = directButton;
-                    if (statusCell.directButton) {
-                        statusCell.directButton.style.display = (initialState === 'online' && isLoggedIn) ? 'inline-block' : 'none';
-                    }
                     registerStatusCell(video.url, statusCell);
                     statusTasks.push(() => checkAndUpdateStatus(video.url, statusCell));
                 });
@@ -1030,24 +1016,28 @@
             const onlineList = document.getElementById('onlineList');
             onlineList.innerHTML = '';
 
-            const onlineVideos = getOnlineVideos();
-            if (onlineVideos.length === 0) {
+            const onlineStatuses = document.querySelectorAll('.status.online');
+            if (onlineStatuses.length === 0) {
                 const emptyMsg = document.createElement('li');
                 emptyMsg.textContent = 'No one is online';
                 onlineList.appendChild(emptyMsg);
             } else {
-                onlineVideos.forEach(video => {
+                onlineStatuses.forEach(status => {
+                    const row = status.parentNode;
+                    const name = row.querySelector('td:first-child').textContent;
+                    const videoLink = row.querySelector('.link-button').href;
+
                     const listItem = document.createElement('li');
-                    listItem.innerHTML = `<span>${video.name}</span>`;
+                    listItem.innerHTML = `<span>${name}</span>`;
                     const watchButton = document.createElement('a');
-                    watchButton.href = video.url;
+                    watchButton.href = videoLink;
                     watchButton.target = '_blank';
                     watchButton.textContent = 'Watch';
                     watchButton.className = 'link-button';
                     watchButton.onclick = (e) => {
                         e.preventDefault();
-                        incrementWatchCount(video);
-                        loadFloatingVideo(video.url);
+                        incrementWatchCount({ name, url: videoLink });
+                        loadFloatingVideo(videoLink);
                     };
                     listItem.appendChild(watchButton);
 
