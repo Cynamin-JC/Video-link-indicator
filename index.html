@@ -639,6 +639,10 @@
                 .filter(Boolean);
         }
 
+        function getOnlineVideos() {
+            return videoLinks.filter(video => getStatusState(video.url) === 'online');
+        }
+
         function getStatusState(url) {
             return statusCache.get(url) ?? 'offline';
         }
@@ -854,7 +858,7 @@
         function triggerRefresh() {
             nextRefreshAt = Date.now() + AUTO_REFRESH_INTERVAL_MS;
             updateRefreshTimer();
-            populateTables();
+            populateTables({ preservePanels: true });
         }
 
         function loadFloatingVideo(videoSrc) {
@@ -926,11 +930,17 @@
             }
         }
 
-        async function populateTables() {
+        async function populateTables({ preservePanels = false } = {}) {
             if (isPopulating) return;
             isPopulating = true;
 
-            statusCache = new Map();
+            if (!preservePanels) {
+                statusCache = new Map();
+            } else {
+                const currentUrls = new Set(videoLinks.map(video => video.url));
+                statusCache = new Map([...statusCache].filter(([url]) => currentUrls.has(url)));
+            }
+
             statusCellMap = new Map();
 
             const leftTable = document.getElementById('leftTable');
@@ -991,14 +1001,18 @@
                     row.appendChild(linkCell);
 
                     const statusCell = document.createElement('td');
-                    statusCell.className = 'status offline';
-                    statusCell.textContent = 'Offline';
+                    const initialState = getStatusState(video.url);
+                    statusCell.className = `status ${initialState}`;
+                    statusCell.textContent = initialState === 'online' ? 'Online' : 'Offline';
                     statusCell.dataset.url = video.url;
                     row.appendChild(statusCell);
 
                     currentTable.appendChild(row);
 
                     statusCell.directButton = directButton;
+                    if (statusCell.directButton) {
+                        statusCell.directButton.style.display = (initialState === 'online' && isLoggedIn) ? 'inline-block' : 'none';
+                    }
                     registerStatusCell(video.url, statusCell);
                     statusTasks.push(() => checkAndUpdateStatus(video.url, statusCell));
                 });
@@ -1016,28 +1030,24 @@
             const onlineList = document.getElementById('onlineList');
             onlineList.innerHTML = '';
 
-            const onlineStatuses = document.querySelectorAll('.status.online');
-            if (onlineStatuses.length === 0) {
+            const onlineVideos = getOnlineVideos();
+            if (onlineVideos.length === 0) {
                 const emptyMsg = document.createElement('li');
                 emptyMsg.textContent = 'No one is online';
                 onlineList.appendChild(emptyMsg);
             } else {
-                onlineStatuses.forEach(status => {
-                    const row = status.parentNode;
-                    const name = row.querySelector('td:first-child').textContent;
-                    const videoLink = row.querySelector('.link-button').href;
-
+                onlineVideos.forEach(video => {
                     const listItem = document.createElement('li');
-                    listItem.innerHTML = `<span>${name}</span>`;
+                    listItem.innerHTML = `<span>${video.name}</span>`;
                     const watchButton = document.createElement('a');
-                    watchButton.href = videoLink;
+                    watchButton.href = video.url;
                     watchButton.target = '_blank';
                     watchButton.textContent = 'Watch';
                     watchButton.className = 'link-button';
                     watchButton.onclick = (e) => {
                         e.preventDefault();
-                        incrementWatchCount({ name, url: videoLink });
-                        loadFloatingVideo(videoLink);
+                        incrementWatchCount(video);
+                        loadFloatingVideo(video.url);
                     };
                     listItem.appendChild(watchButton);
 
