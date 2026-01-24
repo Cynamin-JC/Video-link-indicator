@@ -655,8 +655,9 @@
             const videoElement = document.getElementById('floating-video');
             if (videoElement) {
                 const sourceElement = videoElement.querySelector('source');
+                videoElement.pause();
                 sourceElement.src = videoSrc;
-                // Removed load() to prevent aborts
+                videoElement.load();
                 videoElement.play().catch(err => {
                     if (err.name !== 'AbortError') { // Ignore aborts, as they're not real errors
                         console.error('Play failed:', err);
