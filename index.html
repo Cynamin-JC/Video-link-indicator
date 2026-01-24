@@ -579,12 +579,14 @@
             if (videoElement) {
                 const sourceElement = videoElement.querySelector('source');
                 sourceElement.src = videoSrc;
-                videoElement.load();
+                // Removed load() to prevent aborts
                 videoElement.play().catch(err => {
-                    console.error('Play failed:', err);
-                    isVideoLoading = false; // Reset on error
+                    if (err.name !== 'AbortError') { // Ignore aborts, as they're not real errors
+                        console.error('Play failed:', err);
+                    }
+                    isVideoLoading = false;
                 }).then(() => {
-                    isVideoLoading = false; // Reset after successful play
+                    isVideoLoading = false;
                 });
             }
         }
