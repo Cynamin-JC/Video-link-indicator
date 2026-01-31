@@ -21,7 +21,7 @@
             --border-radius: 8px;
             --transition: all 0.3s ease;
             --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            --audio-hue: 0deg;
+            --animation-duration: 3s;
         }
 
         body.light-mode {
@@ -312,16 +312,13 @@
 
         .video-wrapper {
             background: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet);
-            filter: hue-rotate(var(--audio-hue));
             padding: 2px;
             border-radius: 8px;
-            animation: rainbow-shift 3s linear infinite;
+            animation: rainbow var(--animation-duration) linear infinite;
         }
 
-        @keyframes rainbow-shift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+        @keyframes rainbow {
+            to { filter: hue-rotate(360deg); }
         }
 
         .video-wrapper video {
@@ -574,11 +571,11 @@
                             <thead>
                                 <tr>
                                     <th>Name</th>
-                                <th>Video Link</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="rightTable"></tbody>
+                                    <th>Video Link</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rightTable"></tbody>
                     </table>
                 </div>
             </div>
@@ -739,6 +736,9 @@
                 const source = audioContext.createMediaElementSource(video);
                 source.connect(analyser);
                 analyser.connect(audioContext.destination);
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
             }
 
             function updateAudioReactivity() {
@@ -746,8 +746,8 @@
                 const dataArray = new Uint8Array(bufferLength);
                 analyser.getByteFrequencyData(dataArray);
                 const average = dataArray.reduce((a, b) => a + b) / bufferLength;
-                const hue = (average / 255) * 360;
-                document.documentElement.style.setProperty('--audio-hue', `${hue}deg`);
+                const speed = Math.max(0.5, 3 - (average / 255) * 2.5); // Faster when louder, min 0.5s
+                document.documentElement.style.setProperty('--animation-duration', `${speed}s`);
                 animationFrameId = requestAnimationFrame(updateAudioReactivity);
             }
 
@@ -799,6 +799,8 @@
                     cancelAnimationFrame(animationFrameId);
                     animationFrameId = null;
                 }
+                // Reset to default speed
+                document.documentElement.style.setProperty('--animation-duration', '3s');
             };
         }
 
