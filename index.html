@@ -56,7 +56,6 @@
             padding: 14px 16px;
             margin-bottom: 16px;
             text-align: center;
-            position: relative;
         }
 
         .top-banner h1 {
@@ -64,28 +63,35 @@
             font-size: clamp(1.5rem, 2.5vw, 2rem);
         }
 
-        .online-bubble {
-            position: absolute;
-            top: 10px;
-            right: 10px;
+        .online-bubble, .watch-bubble {
             background: var(--color-success);
             color: #fff;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            display: flex;
+            width: 30px;
+            height: 30px;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            font-size: 16px;
+            font-size: 14px;
             box-shadow: var(--shadow);
             animation: pulse 2s infinite ease-in-out;
+            margin-left: 10px;
         }
 
         @keyframes pulse {
             0% { transform: scale(1); }
             50% { transform: scale(1.1); }
             100% { transform: scale(1); }
+        }
+
+        .watch-bubble {
+            background: var(--color-primary);
+            animation: none;
+            width: 25px;
+            height: 25px;
+            font-size: 12px;
+            margin-left: auto;
         }
 
         h1 {
@@ -293,7 +299,7 @@
             outline: none;
         }
 
-        #onlineUsers {
+        #onlineUsers, #recentlyWatched {
             background: var(--bg-secondary);
             color: var(--text-primary);
             border-radius: var(--border-radius);
@@ -304,20 +310,22 @@
             height: fit-content;
         }
 
-        #onlineUsers h3 {
+        #onlineUsers h3, #recentlyWatched h3 {
             margin: 0 0 10px;
             font-size: 16px;
             border-bottom: 1px solid var(--text-secondary);
             padding-bottom: 5px;
+            display: flex;
+            align-items: center;
         }
 
-        #onlineUsers ul {
+        #onlineUsers ul, #recentlyWatched ul {
             list-style: none;
             padding: 0;
             margin: 0;
         }
 
-        #onlineUsers li {
+        #onlineUsers li, #recentlyWatched li {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -328,7 +336,7 @@
             background: var(--bg-tertiary);
         }
 
-        #onlineUsers .link-button {
+        #onlineUsers .link-button, #recentlyWatched .link-button {
             font-size: 12px;
             padding: 8px 12px;
             min-height: 36px;
@@ -467,15 +475,21 @@
 <body>
     <div class="top-banner">
         <h1>Video Links & Stream Status</h1>
-        <div id="onlineCounter" class="online-bubble">0</div>
     </div>
 
     <div class="table-container">
         <div class="left-column">
             <div id="onlineUsers">
-                <h3>Online Now</h3>
+                <h3>Online Now <div id="onlineCounter" class="online-bubble">0</div></h3>
                 <ul id="onlineList">
                     <li>No one is online</li>
+                </ul>
+            </div>
+
+            <div id="recentlyWatched">
+                <h3>Recently Watched</h3>
+                <ul id="recentList">
+                    <li>No recent watches</li>
                 </ul>
             </div>
 
@@ -549,6 +563,7 @@
         let refreshCountdownId = null;
         let nextRefreshAt = Date.now() + AUTO_REFRESH_INTERVAL_MS;
         let lastFullCheck = Date.now();
+        let recentWatches = JSON.parse(localStorage.getItem('recentWatches') || '{}');
 
         async function loadVideoLinks() {
             const stored = localStorage.getItem('videoLinks');
@@ -591,6 +606,10 @@
 
         function saveVideoLinks() {
             localStorage.setItem('videoLinks', JSON.stringify(videoLinks));
+        }
+
+        function saveRecentWatches() {
+            localStorage.setItem('recentWatches', JSON.stringify(recentWatches));
         }
 
         async function processInBatches(tasks, batchSize = 10) {
@@ -765,6 +784,7 @@
                 }
 
                 updateOnlineList();
+                updateRecentList();
 
                 const statusTasks = [];
 
@@ -787,6 +807,10 @@
                         linkButton.setAttribute('data-video-src', video.url);
                         linkButton.onclick = (e) => {
                             e.preventDefault();
+                            const name = video.name;
+                            recentWatches[name] = (recentWatches[name] || 0) + 1;
+                            saveRecentWatches();
+                            updateRecentList();
                             loadFloatingVideo(video.url);
                         };
                         linkCell.appendChild(linkButton);
@@ -861,11 +885,39 @@
                     watchButton.setAttribute('data-video-src', videoLink);
                     watchButton.onclick = (e) => {
                         e.preventDefault();
+                        const name = videoLink.split('/').pop(); // or from row
+                        recentWatches[name] = (recentWatches[name] || 0) + 1;
+                        saveRecentWatches();
+                        updateRecentList();
                         loadFloatingVideo(videoLink);
                     };
                     listItem.appendChild(watchButton);
 
                     onlineList.appendChild(listItem);
+                });
+            }
+        }
+
+        function updateRecentList() {
+            const recentList = document.getElementById('recentList');
+            recentList.innerHTML = '';
+
+            const sortedRecent = Object.entries(recentWatches).sort((a, b) => b[1] - a[1]).slice(0, 10); // top 10 by count
+
+            if (sortedRecent.length === 0) {
+                const emptyMsg = document.createElement('li');
+                emptyMsg.textContent = 'No recent watches';
+                recentList.appendChild(emptyMsg);
+            } else {
+                sortedRecent.forEach(([name, count]) => {
+                    const listItem = document.createElement('li');
+                    listItem.innerHTML = `<span>${name}</span>`;
+                    const bubble = document.createElement('div');
+                    bubble.className = 'watch-bubble';
+                    bubble.textContent = count;
+                    listItem.appendChild(bubble);
+
+                    recentList.appendChild(listItem);
                 });
             }
         }
@@ -1021,6 +1073,7 @@
 
         loadVideoLinks().then(() => {
             populateTables();
+            updateRecentList();
             startAutoRefresh();
         });
     </script>
