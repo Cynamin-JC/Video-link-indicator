@@ -599,16 +599,6 @@
             btn.textContent = video.muted ? 'Unmute' : 'Mute';
         }
 
-        function tryAutoPlayLastStream() {
-            const lastStream = localStorage.getItem('lastStreamPlayed');
-            if (lastStream && onlineStatusByUrl[lastStream]) {
-                loadFloatingVideo(lastStream);
-            } else {
-                const wrapper = document.getElementById('centerVideoWrapper');
-                wrapper.style.display = 'none';
-            }
-        }
-
         async function loadVideoLinks() {
             const stored = localStorage.getItem('videoLinks');
             if (stored) {
@@ -706,8 +696,6 @@
 
         function loadFloatingVideo(videoSrc) {
             isVideoLoading = true;
-
-            localStorage.setItem('lastStreamPlayed', videoSrc);
 
             const wrapper = document.getElementById('centerVideoWrapper');
             wrapper.style.display = 'block';
@@ -902,7 +890,6 @@
                 console.log('Online status mapping:', onlineStatusByUrl);
                 updateOnlineList();
                 updateRecentList();
-                tryAutoPlayLastStream();
             } finally {
                 isPopulating = false;
             }
@@ -1162,7 +1149,6 @@
             populateTables();
             updateRecentList();
             startAutoRefresh();
-            tryAutoPlayLastStream();
         });
     </script>
     <script src="static/js/floatingVideoPlayer.js" defer></script>
