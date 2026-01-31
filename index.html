@@ -300,6 +300,7 @@
 
         .centered-video-player {
             background: var(--bg-secondary);
+            border: 2px solid var(--color-primary);
             border-radius: 8px;
             box-shadow: var(--shadow);
             padding: 18px;
@@ -309,22 +310,10 @@
             margin: 0 auto;
         }
 
-        .video-wrapper {
-            background: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet);
-            padding: 2px;
-            border-radius: 8px;
-            animation: rainbow 3s linear infinite;
-        }
-
-        @keyframes rainbow {
-            to { filter: hue-rotate(360deg); }
-        }
-
-        .video-wrapper video {
+        .centered-video-player video {
             width: 100%;
             max-width: 100%;
-            border-radius: 6px;
-            display: block;
+            border-radius: 8px;
         }
 
         .centered-video-player .controls {
@@ -537,12 +526,10 @@
             <div class="centered-content-holder">
                 <div id="centerVideoWrapper">
                     <div id="centerVideoPlayer" class="centered-video-player">
-                        <div class="video-wrapper">
-                            <video id="center-video" controls autoplay muted>
-                                <source src="" type="video/mp4">
-                                Your browser does not support the video tag.
-                            </video>
-                        </div>
+                        <video id="center-video" controls autoplay muted>
+                            <source src="" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
                         <h3 id="video-title" style="margin: 10px 0; text-align: center;"></h3>
                         <div class="controls">
                             <button id="center-mute-btn">Unmute</button>
@@ -571,10 +558,10 @@
                                 <tr>
                                     <th>Name</th>
                                     <th>Video Link</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="rightTable"></tbody>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rightTable"></tbody>
                     </table>
                 </div>
             </div>
@@ -664,7 +651,7 @@
                 try {
                     const batchResults = await Promise.race([
                         Promise.all(batchPromises),
-                        new Promise((_, reject) => setTimeout(() => reject(newError('Batch timeout')), 15000))
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Batch timeout')), 15000))
                     ]);
                     results.push(...batchResults);
                 } catch (error) {
