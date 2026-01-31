@@ -513,6 +513,7 @@
         const ADMIN_PASSWORD = 'g1o1m1l1';
 
         const AUTO_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+        const FULL_CHECK_INTERVAL_MS = 20 * 60 * 1000;
 
         let videoLinks = [];
         let isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
@@ -521,6 +522,7 @@
         let refreshTimerId = null;
         let refreshCountdownId = null;
         let nextRefreshAt = Date.now() + AUTO_REFRESH_INTERVAL_MS;
+        let lastFullCheck = Date.now();
 
         async function loadVideoLinks() {
             const stored = localStorage.getItem('videoLinks');
@@ -609,8 +611,9 @@
         function triggerRefresh(forceFullCheck = false) {
             nextRefreshAt = Date.now() + AUTO_REFRESH_INTERVAL_MS;
             updateRefreshTimer();
-            const now = new Date();
-            const shouldFullCheck = forceFullCheck || now.getMinutes() === 0;
+            const now = Date.now();
+            const shouldFullCheck = forceFullCheck || (now - lastFullCheck > FULL_CHECK_INTERVAL_MS);
+            if (shouldFullCheck) lastFullCheck = now;
             fetchVideoLinks().then(() => {
                 populateTables(shouldFullCheck);
             });
