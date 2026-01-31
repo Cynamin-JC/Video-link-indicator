@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Links & Stream Status</title>
+    <title>MyVRLive! Live VRC DJs</title>
     <style>
         :root {
             --bg-primary: #1e1e1e;
@@ -46,21 +46,6 @@
             margin: 0;
             padding: 16px;
             transition: var(--transition);
-        }
-
-        .top-banner {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow);
-            padding: 14px 16px;
-            margin-bottom: 16px;
-            text-align: center;
-        }
-
-        .top-banner h1 {
-            margin: 0;
-            font-size: clamp(1.5rem, 2.5vw, 2rem);
         }
 
         .online-bubble, .watch-bubble {
@@ -488,11 +473,36 @@
                 min-height: 250px;
             }
         }
+
+        .top-banner {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 14px 16px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
+    <div id="centerVideoWrapper">
+        <div id="centerVideoPlayer" class="centered-video-player">
+            <video id="center-video" controls autoplay muted>
+                <source src="" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <div class="controls">
+                <button id="center-mute-btn">Unmute</button>
+                <input type="range" id="center-volume-slider" min="0" max="1" step="0.1" value="0.5">
+                <button id="center-fullscreen-btn">Full Screen</button>
+                <button id="center-close-video-player">Close</button>
+            </div>
+        </div>
+    </div>
+
     <div class="top-banner">
-        <h1>Video Links & Stream Status</h1>
+        <h1>MyVRLive! Live VRC DJs</h1>
     </div>
 
     <div class="main-wrapper">
@@ -566,21 +576,6 @@
                         <tbody id="rightTable"></tbody>
                     </table>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="centerVideoWrapper">
-        <div id="centerVideoPlayer" class="centered-video-player">
-            <video id="center-video" controls autoplay muted>
-                <source src="" type="video/mp4">
-                Your browser does not support the video tag.
-            </video>
-            <div class="controls">
-                <button id="center-mute-btn">Unmute</button>
-                <input type="range" id="center-volume-slider" min="0" max="1" step="0.1" value="0.5">
-                <button id="center-fullscreen-btn">Full Screen</button>
-                <button id="center-close-video-player">Close</button>
             </div>
         </div>
     </div>
@@ -1105,7 +1100,7 @@
             a.href = url;
             a.download = 'video-links.json';
             a.click();
-            URL.revokeObjectURL(url);
+            URL.createObjectURL(url);
         });
 
         document.getElementById('toggleVideoLinks').addEventListener('click', () => {
