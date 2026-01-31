@@ -584,6 +584,7 @@
         let nextRefreshAt = Date.now() + AUTO_REFRESH_INTERVAL_MS;
         let lastFullCheck = Date.now();
         let recentWatches = JSON.parse(localStorage.getItem('recentWatches') || '{}');
+        let onlineStatusByUrl = {};
 
         function isUserUnmuted() {
             return localStorage.getItem('videoUnmuted') === 'true';
@@ -596,6 +597,16 @@
         function updateMuteBtn(video) {
             const btn = document.getElementById('center-mute-btn');
             btn.textContent = video.muted ? 'Unmute' : 'Mute';
+        }
+
+        function tryAutoPlayLastStream() {
+            const lastStream = localStorage.getItem('lastStreamPlayed');
+            if (lastStream && onlineStatusByUrl[lastStream]) {
+                loadFloatingVideo(lastStream);
+            } else {
+                const wrapper = document.getElementById('centerVideoWrapper');
+                wrapper.style.display = 'none';
+            }
         }
 
         async function loadVideoLinks() {
@@ -617,12 +628,10 @@
                 saveVideoLinks();
             } catch (error) {
                 console.error('Error fetching video links:', error);
-                // Keep the current videoLinks if fetch fails
             }
         }
 
         function deduplicateAndSortVideoLinks() {
-            // Remove duplicates based on name and url
             const seen = new Set();
             videoLinks = videoLinks.filter(link => {
                 const key = `${link.name}|${link.url}`;
@@ -632,8 +641,6 @@
                 seen.add(key);
                 return true;
             });
-
-            // Sort alphabetically by name
             videoLinks.sort((a, b) => a.name.localeCompare(b.name));
         }
 
@@ -699,6 +706,8 @@
 
         function loadFloatingVideo(videoSrc) {
             isVideoLoading = true;
+
+            localStorage.setItem('lastStreamPlayed', videoSrc);
 
             const wrapper = document.getElementById('centerVideoWrapper');
             wrapper.style.display = 'block';
@@ -804,6 +813,13 @@
                     currentCount += group.length;
                 }
 
+                onlineStatusByUrl = {};
+                columns.forEach(group => {
+                    group.forEach(video => {
+                        onlineStatusByUrl[video.url] = false;
+                    });
+                });
+
                 updateOnlineList();
                 updateRecentList();
 
@@ -865,6 +881,7 @@
                             statusCell.className = 'status online';
                             statusCell.textContent = 'Online';
                             statusCell.directButton = directButton;
+                            onlineStatusByUrl[video.url] = true;
                         }
 
                         row.appendChild(statusCell);
@@ -874,6 +891,7 @@
                 });
 
                 await processInBatches(statusTasks, 10);
+                tryAutoPlayLastStream();
             } finally {
                 isPopulating = false;
             }
@@ -883,8 +901,8 @@
             const onlineList = document.getElementById('onlineList');
             onlineList.innerHTML = '';
 
-            const onlineStatuses = document.querySelectorAll('.status.online');
-            const onlineCount = onlineStatuses.length;
+            const onlineLinks = videoLinks.filter(v => onlineStatusByUrl[v.url]);
+            const onlineCount = onlineLinks.length;
             document.getElementById('onlineCounter').textContent = onlineCount;
 
             if (onlineCount === 0) {
@@ -892,28 +910,23 @@
                 emptyMsg.textContent = 'No one is online';
                 onlineList.appendChild(emptyMsg);
             } else {
-                onlineStatuses.forEach(status => {
-                    const row = status.parentNode;
-                    const name = row.querySelector('td:first-child').textContent;
-                    const videoLink = row.querySelector('.link-button').href;
-
+                onlineLinks.forEach(v => {
                     const listItem = document.createElement('li');
-                    listItem.innerHTML = `<span>${name}</span>`;
+                    listItem.innerHTML = `<span>${v.name}</span>`;
                     const watchButton = document.createElement('a');
-                    watchButton.href = videoLink;
+                    watchButton.href = v.url;
                     watchButton.target = '_blank';
                     watchButton.textContent = 'Watch';
                     watchButton.className = 'link-button';
-                    watchButton.setAttribute('data-video-src', videoLink);
                     watchButton.onclick = (e) => {
                         e.preventDefault();
-                        recentWatches[name] = (recentWatches[name] || 0) + 1;
+                        recentWatches[v.name] = (recentWatches[v.name] || 0) + 1;
                         saveRecentWatches();
                         updateRecentList();
-                        if (videoLink.includes('twitch.tv') || videoLink.includes('kick.com')) {
-                            window.open(videoLink, '_blank');
+                        if (v.url.includes('twitch.tv') || v.url.includes('kick.com')) {
+                            window.open(v.url, '_blank');
                         } else {
-                            loadFloatingVideo(videoLink);
+                            loadFloatingVideo(v.url);
                         }
                     };
                     listItem.appendChild(watchButton);
@@ -943,11 +956,7 @@
                     bubble.textContent = count;
 
                     // Check if online
-                    const isOnline = Array.from(document.querySelectorAll('.status.online')).some(status => {
-                        const row = status.parentNode;
-                        const rowName = row.querySelector('td:first-child').textContent;
-                        return rowName === name;
-                    });
+                    const isOnline = Array.from(videoLinks).some(v => v.name === name && onlineStatusByUrl[v.url]);
 
                     if (isOnline) {
                         const watchButton = document.createElement('a');
@@ -1001,7 +1010,7 @@
         function updateStatusCell(isOnline, statusCell) {
             statusCell.className = `status ${isOnline ? 'online' : 'offline'}`;
             statusCell.textContent = isOnline ? 'Online' : 'Offline';
-            // Direct button is always visible, no need to toggle
+            onlineStatusByUrl[statusCell.closest('tr').querySelector('.link-button').href] = isOnline;
         }
 
         async function checkVideoLink(url) {
@@ -1139,6 +1148,7 @@
             populateTables();
             updateRecentList();
             startAutoRefresh();
+            tryAutoPlayLastStream();
         });
     </script>
     <script src="static/js/floatingVideoPlayer.js" defer></script>
