@@ -21,6 +21,7 @@
             --border-radius: 8px;
             --transition: all 0.3s ease;
             --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            --animation-duration: 3s;
         }
 
         body.light-mode {
@@ -300,7 +301,6 @@
 
         .centered-video-player {
             background: var(--bg-secondary);
-            border: 2px solid var(--color-primary);
             border-radius: 8px;
             box-shadow: var(--shadow);
             padding: 18px;
@@ -310,10 +310,23 @@
             margin: 0 auto;
         }
 
-        .centered-video-player video {
+        .video-wrapper {
+            background: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet);
+            filter: hue-rotate(var(--audio-hue));
+            padding: 2px;
+            border-radius: 8px;
+            animation: rainbow var(--animation-duration) linear infinite;
+        }
+
+        @keyframes rainbow {
+            to { filter: hue-rotate(360deg); }
+        }
+
+        .video-wrapper video {
             width: 100%;
             max-width: 100%;
-            border-radius: 8px;
+            border-radius: 6px;
+            display: block;
         }
 
         .centered-video-player .controls {
@@ -526,10 +539,12 @@
             <div class="centered-content-holder">
                 <div id="centerVideoWrapper">
                     <div id="centerVideoPlayer" class="centered-video-player">
-                        <video id="center-video" controls autoplay muted>
-                            <source src="" type="video/mp4">
-                            Your browser does not support the video tag.
-                        </video>
+                        <div class="video-wrapper">
+                            <video id="center-video" controls autoplay muted>
+                                <source src="" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>
                         <h3 id="video-title" style="margin: 10px 0; text-align: center;"></h3>
                         <div class="controls">
                             <button id="center-mute-btn">Unmute</button>
@@ -557,11 +572,11 @@
                             <thead>
                                 <tr>
                                     <th>Name</th>
-                                    <th>Video Link</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="rightTable"></tbody>
+                                <th>Video Link</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rightTable"></tbody>
                     </table>
                 </div>
             </div>
@@ -580,12 +595,16 @@
         let isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
         let isVideoLoading = false;
         let isPopulating = false;
+        let isCheckingStatus = false;
         let refreshTimerId = null;
         let refreshCountdownId = null;
         let nextRefreshAt = Date.now() + AUTO_REFRESH_INTERVAL_MS;
         let lastFullCheck = Date.now();
         let recentWatches = JSON.parse(localStorage.getItem('recentWatches') || '{}');
         let onlineStatusByUrl = {};
+        let audioContext = null;
+        let analyser = null;
+        let animationFrameId = null;
 
         function isUserUnmuted() {
             return localStorage.getItem('videoUnmuted') === 'true';
@@ -710,6 +729,32 @@
             video.currentTime = 0;
             video.src = videoSrc;
             video.load();
+
+            // Set up audio reactivity
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                const source = audioContext.createMediaElementSource(video);
+                source.connect(analyser);
+                analyser.connect(audioContext.destination);
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+            }
+
+            function updateAudioReactivity() {
+                const bufferLength = analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+                analyser.getByteFrequencyData(dataArray);
+                const average = dataArray.reduce((a, b) => a + b) / bufferLength;
+                const speed = Math.max(0.5, 3 - (average / 255) * 2.5); // Faster when louder, min 0.5s
+                document.documentElement.style.setProperty('--animation-duration', `${speed}s`);
+                animationFrameId = requestAnimationFrame(updateAudioReactivity);
+            }
+
+            updateAudioReactivity();
+
             video.play().catch(err => {
                 if (err.name !== 'AbortError') {
                     console.error('Play failed:', err);
@@ -752,6 +797,12 @@
                 wrapper.style.display = 'none';
                 video.pause();
                 video.src = '';
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+                // Reset to default speed
+                document.documentElement.style.setProperty('--animation-duration', '3s');
             };
         }
 
@@ -879,6 +930,10 @@
                     });
                 });
 
+                if (statusTasks.length > 0) {
+                    isCheckingStatus = true;
+                }
+
                 // Split tasks into two halves and process in parallel
                 const batchSplit = Math.ceil(statusTasks.length / 2);
                 const firstHalf = statusTasks.slice(0, batchSplit);
@@ -892,14 +947,17 @@
                     console.error('Error in batching:', error);
                 }
                 console.log('Online status mapping:', onlineStatusByUrl);
+            } finally {
+                isCheckingStatus = false;
                 updateOnlineList();
                 updateRecentList();
-            } finally {
                 isPopulating = false;
             }
         }
 
         function updateOnlineList() {
+            if (isCheckingStatus) return; // Don't update during checks
+
             const onlineList = document.getElementById('onlineList');
             onlineList.innerHTML = '';
 
@@ -926,7 +984,7 @@
                         recentWatches[v.name] = (recentWatches[v.name] || 0) + 1;
                         saveRecentWatches();
                         updateRecentList();
-                        if (v.url.includes('twitch.tv') || v.url.includes('kick.com')) {
+                        if (v.url.includes('twitch.tv') || video.url.includes('kick.com')) {
                             window.open(v.url, '_blank');
                         } else {
                             loadFloatingVideo(v.url, v.name);
@@ -940,6 +998,8 @@
         }
 
         function updateRecentList() {
+            if (isCheckingStatus) return; // Don't update during checks
+
             const recentList = document.getElementById('recentList');
             recentList.innerHTML = '';
 
@@ -1014,8 +1074,7 @@
             statusCell.className = `status ${isOnline ? 'online' : 'offline'}`;
             statusCell.textContent = isOnline ? 'Online' : 'Offline';
             onlineStatusByUrl[url] = isOnline;
-            updateOnlineList();
-            updateRecentList();
+            // Removed calls to updateOnlineList and updateRecentList here
         }
 
         async function checkVideoLink(url) {
