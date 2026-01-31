@@ -688,6 +688,17 @@
             isPopulating = true;
 
             try {
+                // Collect current offline URLs and all current URLs before clearing
+                const currentUrls = new Set();
+                document.querySelectorAll('.link-button').forEach(btn => currentUrls.add(btn.href));
+
+                const offlineUrls = new Set();
+                document.querySelectorAll('.status.offline').forEach(status => {
+                    const row = status.parentNode;
+                    const link = row.querySelector('.link-button').href;
+                    offlineUrls.add(link);
+                });
+
                 const leftTable = document.getElementById('leftTable');
                 const rightTable = document.getElementById('rightTable');
                 leftTable.innerHTML = '';
@@ -760,14 +771,28 @@
                         row.appendChild(linkCell);
 
                         const statusCell = document.createElement('td');
-                        statusCell.className = 'status checking';
-                        statusCell.textContent = 'Checking...';
+                        const isNew = !currentUrls.has(video.url);
+                        const wasOffline = offlineUrls.has(video.url);
+
+                        if (isNew || wasOffline) {
+                            // Check status for new or previously offline
+                            statusCell.className = 'status checking';
+                            statusCell.textContent = 'Checking...';
+                            statusCell.directButton = directButton;
+                            statusTasks.push(() => checkVideoStatus(video.url, statusCell));
+                        } else {
+                            // Assume still online
+                            statusCell.className = 'status online';
+                            statusCell.textContent = 'Online';
+                            statusCell.directButton = directButton;
+                            if (statusCell.directButton) {
+                                statusCell.directButton.style.display = (true && isLoggedIn) ? 'inline-block' : 'none';
+                            }
+                        }
+
                         row.appendChild(statusCell);
 
                         currentTable.appendChild(row);
-
-                        statusCell.directButton = directButton;
-                        statusTasks.push(() => checkVideoStatus(video.url, statusCell));
                     });
                 });
 
