@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale="1.0">
     <title>MyVRLive! Live VRC DJs</title>
     <style>
         :root {
@@ -820,9 +820,6 @@
                     });
                 });
 
-                updateOnlineList();
-                updateRecentList();
-
                 const statusTasks = [];
 
                 columns.forEach((group, index) => {
@@ -875,7 +872,7 @@
                             statusCell.className = 'status checking';
                             statusCell.textContent = 'Checking...';
                             statusCell.directButton = directButton;
-                            statusTasks.push(() => checkVideoStatus(video.url, statusCell));
+                            statusTasks.push(() => checkVideoStatus(video.url, statusCell, video.url));
                         } else {
                             // Assume still online
                             statusCell.className = 'status online';
@@ -889,6 +886,9 @@
                         currentTable.appendChild(row);
                     });
                 });
+
+                updateOnlineList();
+                updateRecentList();
 
                 await processInBatches(statusTasks, 10);
                 tryAutoPlayLastStream();
@@ -987,30 +987,32 @@
             }
         }
 
-        async function checkVideoStatus(url, statusCell) {
+        async function checkVideoStatus(url, statusCell, videoUrl) {
             try {
                 if (url.includes('twitch.tv')) {
                     const username = url.split('twitch.tv/')[1];
                     const isLive = await checkTwitchStatus(username);
-                    updateStatusCell(isLive, statusCell);
+                    updateStatusCell(isLive, statusCell, videoUrl);
                 } else if (url.includes('kick.com')) {
                     const username = url.split('kick.com/')[1];
                     const isLive = await checkKickStatus(username);
-                    updateStatusCell(isLive, statusCell);
+                    updateStatusCell(isLive, statusCell, videoUrl);
                 } else {
                     const isOnline = await checkVideoLink(url);
-                    updateStatusCell(isOnline, statusCell);
+                    updateStatusCell(isOnline, statusCell, videoUrl);
                 }
             } catch (error) {
                 console.error(`Error checking status for ${url}:`, error);
-                updateStatusCell(false, statusCell);
+                updateStatusCell(false, statusCell, videoUrl);
             }
         }
 
-        function updateStatusCell(isOnline, statusCell) {
+        function updateStatusCell(isOnline, statusCell, url) {
             statusCell.className = `status ${isOnline ? 'online' : 'offline'}`;
             statusCell.textContent = isOnline ? 'Online' : 'Offline';
-            onlineStatusByUrl[statusCell.closest('tr').querySelector('.link-button').href] = isOnline;
+            onlineStatusByUrl[url] = isOnline;
+            updateOnlineList();
+            updateRecentList();
         }
 
         async function checkVideoLink(url) {
