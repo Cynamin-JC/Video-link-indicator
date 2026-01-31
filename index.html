@@ -653,7 +653,7 @@
                 try {
                     const batchResults = await Promise.race([
                         Promise.all(batchPromises),
-                        new Promise((_, reject) => setTimeout(() => reject(newError('Batch timeout')), 15000))
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Batch timeout')), 15000))
                     ]);
                     results.push(...batchResults);
                 } catch (error) {
@@ -845,7 +845,7 @@
                         directButton.target = '_blank';
                         directButton.textContent = 'Direct';
                         directButton.className = 'direct-button';
-                        directButton.style.display = 'none';
+                        directButton.style.display = 'inline-block';
                         linkCell.appendChild(directButton);
 
                         row.appendChild(linkCell);
@@ -865,9 +865,6 @@
                             statusCell.className = 'status online';
                             statusCell.textContent = 'Online';
                             statusCell.directButton = directButton;
-                            if (statusCell.directButton) {
-                                statusCell.directButton.style.display = (true && isLoggedIn) ? 'inline-block' : 'none';
-                            }
                         }
 
                         row.appendChild(statusCell);
@@ -1004,11 +1001,7 @@
         function updateStatusCell(isOnline, statusCell) {
             statusCell.className = `status ${isOnline ? 'online' : 'offline'}`;
             statusCell.textContent = isOnline ? 'Online' : 'Offline';
-            if (statusCell.directButton) {
-                statusCell.directButton.style.display = (isOnline && isLoggedIn) ? 'inline-block' : 'none';
-            }
-            updateOnlineList();
-            updateRecentList(); // Update recent list when status changes
+            // Direct button is always visible, no need to toggle
         }
 
         async function checkVideoLink(url) {
