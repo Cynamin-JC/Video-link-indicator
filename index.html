@@ -156,16 +156,6 @@
             }
         }
 
-        @media (max-width: 900px) {
-            .main-wrapper {
-                flex-direction: column;
-            }
-            .user-sidebar {
-                width: 100%;
-                min-height: auto;
-            }
-        }
-
         .table-scroll {
             width: 100%;
             overflow-x: auto;
@@ -433,87 +423,70 @@
             }
         }
 
-        #floating-video-player {
-            position: fixed;
-            bottom: 16px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: min(320px, 90vw);
-            min-width: 200px;
-            min-height: 150px;
-            background: #2e2e2e;
-            border: 2px solid #4285f4;
-            border-radius: 8px;
-            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3);
-            padding: 10px;
-            z-index: 1000;
-            overflow: hidden;
-            transition: background-color 0.3s, border-color 0.3s;
+        #centerVideoWrapper {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            min-height: 400px;
+            margin: 20px 0;
         }
 
-        body.light-mode #floating-video-player {
-            background: #fff;
-            border-color: #007AFF;
+        .centered-video-player {
+            background: var(--bg-secondary);
+            border: 2px solid var(--color-primary);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            width: min(80vw, 1000px);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
-        #floating-video-player video {
+        .centered-video-player video {
             width: 100%;
             height: auto;
-            object-fit: contain;
-            border-radius: 4px;
+            max-height: 70vh;
+            border-radius: 8px;
         }
 
-        #floating-video-player .controls {
+        .centered-video-player .controls {
             display: flex;
             align-items: center;
-            margin-top: 6px;
+            margin-top: 15px;
+            gap: 12px;
             flex-wrap: wrap;
-            gap: 6px;
         }
 
-        #floating-video-player button {
-            padding: 6px 8px;
-            background: #4285f4;
+        .centered-video-player button {
+            padding: 10px 14px;
+            background: var(--color-primary);
             color: #fff;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 11px;
-            min-height: 32px;
+            font-size: 14px;
+            min-height: 40px;
+            transition: var(--transition);
         }
 
-        #floating-video-player button:hover {
-            background: #306dc5;
+        .centered-video-player button:hover {
+            background: var(--color-primary-hover);
         }
 
-        body.light-mode #floating-video-player button {
-            background: #007AFF;
-        }
-
-        body.light-mode #floating-video-player button:hover {
-            background: #005BB5;
-        }
-
-        #floating-video-player input[type="range"] {
-            width: 80px;
-            margin: 0 5px;
+        .centered-video-player input[type="range"] {
+            width: 120px;
         }
 
         @media (max-width: 600px) {
-            #floating-video-player {
-                left: 12px;
-                right: 12px;
-                width: auto;
-                bottom: 12px;
+            .centered-video-player {
+                width: 98vw;
+                padding: 10px;
             }
-        }
-
-        #floating-video-player.fullscreen-mode {
-            top: 100px;
-            left: 336px;
-            width: calc(100vw - 352px);
-            height: calc(100vh - 116px);
-            transform: none;
+            #centerVideoWrapper {
+                min-height: 250px;
+            }
         }
     </style>
 </head>
@@ -593,6 +566,21 @@
                         <tbody id="rightTable"></tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="centerVideoWrapper">
+        <div id="centerVideoPlayer" class="centered-video-player">
+            <video id="center-video" controls autoplay muted>
+                <source src="" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <div class="controls">
+                <button id="center-mute-btn">Unmute</button>
+                <input type="range" id="center-volume-slider" min="0" max="1" step="0.1" value="0.5">
+                <button id="center-fullscreen-btn">Full Screen</button>
+                <button id="center-close-video-player">Close</button>
             </div>
         </div>
     </div>
@@ -717,78 +705,45 @@
         function loadFloatingVideo(videoSrc) {
             isVideoLoading = true;
 
-            let videoPlayer = document.getElementById('floating-video-player');
-            if (!videoPlayer) {
-                videoPlayer = document.createElement('div');
-                videoPlayer.id = 'floating-video-player';
-                videoPlayer.innerHTML = `
-                    <video id="floating-video" width="320" height="180" controls autoplay muted>
-                        <source src="" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                    <div class="controls">
-                        <button id="mute-btn">Unmute</button>
-                        <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.5">
-                        <button id="fullscreen-btn">Full Screen</button>
-                        <button id="close-video-player">Close</button>
-                    </div>
-                `;
+            const wrapper = document.getElementById('centerVideoWrapper');
+            wrapper.style.display = 'flex';
+            const video = document.getElementById('center-video');
+            video.pause();
+            video.muted = true;
+            video.currentTime = 0;
+            video.src = videoSrc;
+            video.load();
+            video.play().catch(err => {
+                if (err.name !== 'AbortError') {
+                    console.error('Play failed:', err);
+                }
+                isVideoLoading = false;
+            }).then(() => {
+                isVideoLoading = false;
+            });
 
-                document.body.appendChild(videoPlayer);
-
-                document.getElementById('mute-btn').addEventListener('click', () => {
-                    const video = document.getElementById('floating-video');
-                    const muteBtn = document.getElementById('mute-btn');
-                    video.muted = !video.muted;
-                    muteBtn.textContent = video.muted ? 'Unmute' : 'Mute';
-                });
-
-                document.getElementById('volume-slider').addEventListener('input', () => {
-                    const video = document.getElementById('floating-video');
-                    const slider = document.getElementById('volume-slider');
-                    video.volume = slider.value;
-                });
-
-                document.getElementById('fullscreen-btn').addEventListener('click', () => {
-                    const video = document.getElementById('floating-video');
-                    if (video.requestFullscreen) {
-                        video.requestFullscreen().catch(err => console.error('Full screen error:', err));
-                    } else if (video.webkitRequestFullscreen) {
-                        video.webkitRequestFullscreen();
-                    } else if (video.msRequestFullscreen) {
-                        video.msRequestFullscreen();
-                    }
-                });
-
-                document.getElementById('close-video-player').addEventListener('click', () => {
-                    videoPlayer.remove();
-                    isVideoLoading = false;
-                });
-            }
-
-            // Adjust size based on table visibility
-            const tableContainer = document.querySelector('.table-container');
-            if (tableContainer.style.display === 'none') {
-                videoPlayer.classList.add('fullscreen-mode');
-            } else {
-                videoPlayer.classList.remove('fullscreen-mode');
-            }
-
-            const videoElement = document.getElementById('floating-video');
-            if (videoElement) {
-                const sourceElement = videoElement.querySelector('source');
-                videoElement.pause();
-                sourceElement.src = videoSrc;
-                videoElement.load();
-                videoElement.play().catch(err => {
-                    if (err.name !== 'AbortError') {
-                        console.error('Play failed:', err);
-                    }
-                    isVideoLoading = false;
-                }).then(() => {
-                    isVideoLoading = false;
-                });
-            }
+            // Attach controls
+            document.getElementById('center-mute-btn').onclick = () => {
+                video.muted = !video.muted;
+                document.getElementById('center-mute-btn').textContent = video.muted ? 'Unmute' : 'Mute';
+            };
+            document.getElementById('center-volume-slider').oninput = () => {
+                video.volume = document.getElementById('center-volume-slider').value;
+            };
+            document.getElementById('center-fullscreen-btn').onclick = () => {
+                if (video.requestFullscreen) {
+                    video.requestFullscreen();
+                } else if (video.webkitRequestFullscreen) {
+                    video.webkitRequestFullscreen();
+                } else if (video.msRequestFullscreen) {
+                    video.msRequestFullscreen();
+                }
+            };
+            document.getElementById('center-close-video-player').onclick = () => {
+                wrapper.style.display = 'none';
+                video.pause();
+                video.src = '';
+            };
         }
 
         async function populateTables(forceFullCheck = false) {
@@ -986,8 +941,8 @@
                     // Check if online
                     const isOnline = Array.from(document.querySelectorAll('.status.online')).some(status => {
                         const row = status.parentNode;
-                        const link = row.querySelector('td:first-child').textContent;
-                        return link === name;
+                        const rowName = row.querySelector('td:first-child').textContent;
+                        return rowName === name;
                     });
 
                     if (isOnline) {
@@ -1156,15 +1111,6 @@
         document.getElementById('toggleVideoLinks').addEventListener('click', () => {
             const container = document.querySelector('.table-container');
             container.style.display = container.style.display === 'none' ? 'grid' : 'none';
-            // Adjust video player size after toggle
-            const videoPlayer = document.getElementById('floating-video-player');
-            if (videoPlayer) {
-                if (container.style.display === 'none') {
-                    videoPlayer.classList.add('fullscreen-mode');
-                } else {
-                    videoPlayer.classList.remove('fullscreen-mode');
-                }
-            }
         });
 
         document.getElementById('toggleAdmin').addEventListener('click', () => {
