@@ -586,10 +586,6 @@
         let nextRefreshAt = Date.now() + AUTO_REFRESH_INTERVAL_MS;
         let lastFullCheck = Date.now();
         let recentWatches = JSON.parse(localStorage.getItem('recentWatches') || '{}');
-        let audioContext = null;
-        let analyser = null;
-        let dataArray = null;
-        let animationId = null;
 
         async function loadVideoLinks() {
             const stored = localStorage.getItem('videoLinks');
@@ -698,12 +694,12 @@
                 videoPlayer = document.createElement('div');
                 videoPlayer.id = 'floating-video-player';
                 videoPlayer.innerHTML = `
-                    <video id="floating-video" width="320" height="180" controls autoplay>
+                    <video id="floating-video" width="320" height="180" controls autoplay muted>
                         <source src="" type="video/mp4">
                         Your browser does not support the video tag.
                     </video>
                     <div class="controls">
-                        <button id="mute-btn">Mute</button>
+                        <button id="mute-btn">Unmute</button>
                         <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.5">
                         <button id="fullscreen-btn">Full Screen</button>
                         <button id="close-video-player">Close</button>
@@ -739,7 +735,6 @@
                 document.getElementById('close-video-player').addEventListener('click', () => {
                     videoPlayer.remove();
                     isVideoLoading = false;
-                    stopAudioVisualization();
                 });
             }
 
@@ -756,46 +751,7 @@
                     isVideoLoading = false;
                 }).then(() => {
                     isVideoLoading = false;
-                    startAudioVisualization(videoElement);
                 });
-            }
-        }
-
-        function startAudioVisualization(videoElement) {
-            if (!audioContext) {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            }
-
-            if (!analyser) {
-                analyser = audioContext.createAnalyser();
-                analyser.fftSize = 256;
-                dataArray = new Uint8Array(analyser.frequencyBinCount);
-            }
-
-            const source = audioContext.createMediaElementSource(videoElement);
-            source.connect(analyser);
-            analyser.connect(audioContext.destination);
-
-            function animate() {
-                analyser.getByteFrequencyData(dataArray);
-                const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
-                const intensity = Math.min(average / 128 * 20, 20); // Scale to 0-20px
-                const videoPlayer = document.getElementById('floating-video-player');
-                videoPlayer.style.boxShadow = `0 0 ${intensity}px rgba(66, 133, 244, 0.8)`;
-                animationId = requestAnimationFrame(animate);
-            }
-
-            animate();
-        }
-
-        function stopAudioVisualization() {
-            if (animationId) {
-                cancelAnimationFrame(animationId);
-                animationId = null;
-            }
-            const videoPlayer = document.getElementById('floating-video-player');
-            if (videoPlayer) {
-                videoPlayer.style.boxShadow = '0px 4px 6px rgba(0, 0, 0, 0.3)';
             }
         }
 
@@ -1151,7 +1107,7 @@
 
         document.getElementById('exportBtn').addEventListener('click', () => {
             const data = JSON.stringify(videoLinks, null, 2);
-            const blob = new Blob([data], { type: 'application/json' });
+            const blob = new Blob([data], { type='application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
