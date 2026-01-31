@@ -56,11 +56,36 @@
             padding: 14px 16px;
             margin-bottom: 16px;
             text-align: center;
+            position: relative;
         }
 
         .top-banner h1 {
             margin: 0;
             font-size: clamp(1.5rem, 2.5vw, 2rem);
+        }
+
+        .online-bubble {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--color-success);
+            color: #fff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+            box-shadow: var(--shadow);
+            animation: pulse 2s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
         }
 
         h1 {
@@ -442,6 +467,7 @@
 <body>
     <div class="top-banner">
         <h1>Video Links & Stream Status</h1>
+        <div id="onlineCounter" class="online-bubble">0</div>
     </div>
 
     <div class="table-container">
@@ -812,7 +838,10 @@
             onlineList.innerHTML = '';
 
             const onlineStatuses = document.querySelectorAll('.status.online');
-            if (onlineStatuses.length === 0) {
+            const onlineCount = onlineStatuses.length;
+            document.getElementById('onlineCounter').textContent = onlineCount;
+
+            if (onlineCount === 0) {
                 const emptyMsg = document.createElement('li');
                 emptyMsg.textContent = 'No one is online';
                 onlineList.appendChild(emptyMsg);
